@@ -28,11 +28,11 @@ export default function Home() {
       <Navbar activeTool={view === "dashboard" ? "dashboard" : view} onNavigate={(t) => setView(t as ToolView)} />
       <main className="relative z-10 min-h-screen">
         {view === "dashboard" && <Dashboard onSelect={(t) => setView(t as ToolView)} />}
-        {view === "pulse" && <PulsePanel onBack={() => setView("dashboard")} />}
-        {view === "tune" && <TunePanel onBack={() => setView("dashboard")} />}
-        {view === "scan" && <ScanPanel onBack={() => setView("dashboard")} />}
-        {view === "keys" && <KeysPanel onBack={() => setView("dashboard")} />}
-        {view === "ear" && <EarPanel onBack={() => setView("dashboard")} />}
+        {view === "pulse" && <PulsePanel />}
+        {view === "tune" && <TunePanel />}
+        {view === "scan" && <ScanPanel />}
+        {view === "keys" && <KeysPanel />}
+        {view === "ear" && <EarPanel />}
       </main>
       <Footer />
     </>

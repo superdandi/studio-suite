@@ -8,7 +8,7 @@ import { INTERVALS } from "@/lib/music-theory";
 
 type EarMode = "explore" | "practice" | "challenge-10s" | "challenge-3s";
 
-export default function EarPanel({ onBack }: { onBack: () => void }) {
+export default function EarPanel() {
   const [mode, setMode] = useState<EarMode>("explore");
   const [selectedInterval, setSelectedInterval] = useState<number | null>(null);
   const [currentInterval, setCurrentInterval] = useState<number | null>(null);
@@ -69,7 +69,7 @@ export default function EarPanel({ onBack }: { onBack: () => void }) {
   }, [mode, currentInterval]);
 
   return (
-    <ToolContainer title="Ear" icon="👂" onBack={onBack}>
+    <ToolContainer title="Ear" icon="👂">
       <div className="space-y-6">
         <div className="flex flex-wrap gap-2 justify-center">
           {[

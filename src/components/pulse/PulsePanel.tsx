@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import ToolContainer from "@/components/ToolContainer";
 import { useMetronome, type RhythmFigure } from "@/hooks/useMetronome";
 
-export default function PulsePanel({ onBack }: { onBack: () => void }) {
+export default function PulsePanel() {
   const [bpm, setBpm] = useState(120);
   const [figure, setFigure] = useState<RhythmFigure>("quarter");
   const [isPlaying, setIsPlaying] = useState(false);
@@ -48,7 +48,7 @@ export default function PulsePanel({ onBack }: { onBack: () => void }) {
   }, [tapTimes]);
 
   return (
-    <ToolContainer title="Pulse" icon="⚡" onBack={onBack}>
+    <ToolContainer title="Pulse" icon="⚡">
       <div className="space-y-6">
         <div className="flex items-center justify-center gap-8">
           <div

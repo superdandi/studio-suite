@@ -11,12 +11,12 @@ export default function Footer() {
           </a>
           <span className="text-[#2a2a4a]">|</span>
           <a
-            href="https://github.com/superdandi/studio-suite"
+            href="https://superdandi.github.io/oscilate"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#8888aa] hover:text-[#ff00ff] transition-colors"
           >
-            GitHub
+            ⟐ Oscilate
           </a>
           <span className="text-[#2a2a4a]">|</span>
           <a

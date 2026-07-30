@@ -32,6 +32,8 @@ src/
 - **Analizador**: FFT + peak picking + detección de acordes (Krumhansl-Schmuckler) en `lib/analyzer.ts`
 - **Audio**: Todos los sonidos son procedurales (osciladores Web Audio), sin archivos de audio externos
 - **Tema**: Cyberpunk con colores #ff00ff, #00ffff, #00dd88 sobre fondo #0a0a0f
+- **Footer**: Enlaces a Theory (local), Oscilate y VIZCOSO (externos)
+- **Navegación**: Navbar con logo que vuelve al Dashboard + 5 tabs de herramientas
 
 ## Build
 

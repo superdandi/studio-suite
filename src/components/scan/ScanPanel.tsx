@@ -12,7 +12,7 @@ import type { AnalysisResult } from "@/lib/analyzer";
 
 type InputMode = "mic" | "file";
 
-export default function ScanPanel({ onBack }: { onBack: () => void }) {
+export default function ScanPanel() {
   const [mode, setMode] = useState<InputMode>("mic");
   const [isActive, setIsActive] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -70,7 +70,7 @@ export default function ScanPanel({ onBack }: { onBack: () => void }) {
   }, [analyzer]);
 
   return (
-    <ToolContainer title="Scan" icon="📊" onBack={onBack}>
+    <ToolContainer title="Scan" icon="📊">
       <div className="space-y-6">
         <div className="flex flex-wrap gap-2 justify-center">
           <button

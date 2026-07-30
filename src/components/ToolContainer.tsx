@@ -4,22 +4,13 @@ export default function ToolContainer({
   title,
   icon,
   children,
-  onBack,
 }: {
   title: string;
   icon: string;
   children: React.ReactNode;
-  onBack: () => void;
 }) {
   return (
     <div className="mx-auto max-w-4xl px-4 pt-20 pb-16">
-      <button
-        onClick={onBack}
-        className="mb-6 text-sm text-[#8888aa] hover:text-[#00ffff] transition-colors"
-      >
-        ← Dashboard
-      </button>
-
       <h2 className="mb-8 text-center">
         <span
           data-text={title}

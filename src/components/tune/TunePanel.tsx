@@ -9,7 +9,7 @@ import { GUITAR_STRINGS, BASS_STRINGS } from "@/lib/music-theory";
 
 type TunerMode = "chromatic" | "guitar" | "bass";
 
-export default function TunePanel({ onBack }: { onBack: () => void }) {
+export default function TunePanel() {
   const [mode, setMode] = useState<TunerMode>("chromatic");
   const [pitch, setPitch] = useState<PitchResult | null>(null);
   const mic = useMicrophone();
@@ -63,7 +63,7 @@ export default function TunePanel({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <ToolContainer title="Tune" icon="🎵" onBack={onBack}>
+    <ToolContainer title="Tune" icon="🎵">
       <div className="space-y-6">
         <div className="flex flex-wrap gap-2 justify-center">
           {[

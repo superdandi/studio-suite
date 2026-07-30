@@ -20,7 +20,7 @@ const SCALE_CATEGORIES: { label: string; types: ScaleType[] }[] = [
   { label: "Otras", types: ["blues", "chromatic", "whole-tone", "octatonic"] },
 ];
 
-export default function KeysPanel({ onBack }: { onBack: () => void }) {
+export default function KeysPanel() {
   const [root, setRoot] = useState<NoteName>("C");
   const [scaleType, setScaleType] = useState<ScaleType>("major");
   const [highlightedNotes, setHighlightedNotes] = useState<number[]>([]);
@@ -49,7 +49,7 @@ export default function KeysPanel({ onBack }: { onBack: () => void }) {
   const scaleNotes = getScaleNotes(root, scaleType);
 
   return (
-    <ToolContainer title="Keys" icon="🎹" onBack={onBack}>
+    <ToolContainer title="Keys" icon="🎹">
       <div className="space-y-6">
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-[200px]">

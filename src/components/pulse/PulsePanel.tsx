@@ -2,18 +2,39 @@
 
 import { useState, useCallback, useEffect } from "react";
 import ToolContainer from "@/components/ToolContainer";
-import { useMetronome, type RhythmFigure } from "@/hooks/useMetronome";
+import { useMetronome, type RhythmFigure, type TimeSignature } from "@/hooks/useMetronome";
+import type { SoundType } from "@/lib/audio";
+
+const TIME_SIGNATURES: TimeSignature[] = ["4/4", "3/4", "6/8", "2/4", "5/4", "7/8", "9/8"];
+
+const RHYTHM_FIGURES: { value: RhythmFigure; label: string }[] = [
+  { value: "quarter", label: "♩ Negra" },
+  { value: "eighth", label: "♪ Corcheas" },
+  { value: "triplet", label: "♪♪ Tresillos" },
+  { value: "sixteenth", label: "♬ Semicorcheas" },
+  { value: "quintuplet", label: "5:5 Quintillo" },
+  { value: "swing", label: "♫ Swing" },
+];
+
+const SOUND_OPTIONS: { value: SoundType; label: string }[] = [
+  { value: "normal", label: "Normal" },
+  { value: "808", label: "808" },
+  { value: "flstudio", label: "FL Studio" },
+  { value: "analog", label: "Analógico" },
+];
 
 export default function PulsePanel() {
   const [bpm, setBpm] = useState(120);
   const [figure, setFigure] = useState<RhythmFigure>("quarter");
+  const [timeSignature, setTimeSignature] = useState<TimeSignature>("4/4");
+  const [soundType, setSoundType] = useState<SoundType>("normal");
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const metronome = useMetronome();
 
   const beatCallback = useCallback((beat: number) => {
-    setCurrentBeat(beat % 4);
+    setCurrentBeat(beat);
   }, []);
 
   useEffect(() => {
@@ -22,9 +43,9 @@ export default function PulsePanel() {
       return;
     }
     setCurrentBeat(0);
-    metronome.start(bpm, figure, beatCallback);
+    metronome.start(bpm, figure, beatCallback, soundType, timeSignature);
     return () => metronome.stop();
-  }, [bpm, figure, isPlaying, metronome, beatCallback]);
+  }, [bpm, figure, isPlaying, soundType, timeSignature, metronome, beatCallback]);
 
   const handleStartStop = useCallback(() => {
     setIsPlaying((prev) => !prev);
@@ -91,15 +112,10 @@ export default function PulsePanel() {
         <div className="space-y-2">
           <label className="text-sm text-[#8888aa]">Figura rítmica</label>
           <div className="flex flex-wrap gap-2">
-            {[
-              { value: "quarter", label: "♩ Negra" },
-              { value: "eighth", label: "♪ Corcheas" },
-              { value: "triplet", label: "♪♪ Tresillos" },
-              { value: "sixteenth", label: "♬ Semicorcheas" },
-            ].map(({ value, label }) => (
+            {RHYTHM_FIGURES.map(({ value, label }) => (
               <button
                 key={value}
-                onClick={() => setFigure(value as RhythmFigure)}
+                onClick={() => setFigure(value)}
                 className={`px-4 py-2 rounded border text-sm transition-all ${
                   figure === value
                     ? "border-[#ff00ff] text-[#ff00ff] bg-[#ff00ff]/10"
@@ -114,13 +130,37 @@ export default function PulsePanel() {
 
         <div className="space-y-2">
           <label className="text-sm text-[#8888aa]">Compás</label>
-          <div className="flex gap-2">
-            {["4/4", "3/4", "6/8", "2/4", "5/4", "7/8"].map((ts) => (
+          <div className="flex flex-wrap gap-2">
+            {TIME_SIGNATURES.map((ts) => (
               <button
                 key={ts}
-                className="px-3 py-1 rounded border border-[#2a2a4a] text-[#8888aa] text-sm hover:border-[#ff00ff]/50 transition-colors"
+                onClick={() => setTimeSignature(ts)}
+                className={`px-3 py-1 rounded border text-sm transition-all ${
+                  timeSignature === ts
+                    ? "border-[#00ffff] text-[#00ffff] bg-[#00ffff]/10"
+                    : "border-[#2a2a4a] text-[#8888aa] hover:border-[#00ffff]/50"
+                }`}
               >
                 {ts}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm text-[#8888aa]">Sonido</label>
+          <div className="flex flex-wrap gap-2">
+            {SOUND_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setSoundType(value)}
+                className={`px-4 py-2 rounded border text-sm transition-all ${
+                  soundType === value
+                    ? "border-[#ffaa00] text-[#ffaa00] bg-[#ffaa00]/10"
+                    : "border-[#2a2a4a] text-[#8888aa] hover:border-[#ffaa00]/50"
+                }`}
+              >
+                {label}
               </button>
             ))}
           </div>

@@ -27,7 +27,36 @@ src/
 
 ## Notas técnicas
 
-- **Metrónomo**: `useMetronome` hook con `setInterval`. El BPM se actualiza en tiempo real via `useEffect` que reinicia el intervalo al cambiar BPM/figure mientras reproduce.
+### Metrónomo
+
+Hook `useMetronome` basado en cadena de `setTimeout` (permite timing irregular para swing).
+
+**Figuras rítmicas** — cada figura define cuántas subdivisiones por pulso:
+| Figura     | Divisiones |
+|------------|-----------|
+| Negra      | 1         |
+| Corcheas   | 2         |
+| Tresillos  | 3         |
+| Semicorcheas | 4       |
+| Quintillo  | 5         |
+| Swing      | 2 (timing 66/33) |
+
+**Swing** — las dos subdivisiones de cada pulso no son equitativas: la primera ocupa 2/3 del intervalo y la segunda 1/3. Esto se implementa calculando el delay de cada `setTimeout` individualmente según la posición dentro del par (`count % 2`).
+
+**Compás** — define los beats por compás que determinan el ciclo de acentos y el display visual:
+- 4/4: 4 beats · 3/4: 3 · 6/8: 2 (subdivisión ternaria) · 2/4: 2
+- 5/4: 5 · 7/8: 7 · 9/8: 3 (subdivisión ternaria)
+
+**Sonidos** — 4 tipos seleccionables, todos generados proceduralmente con Web Audio API:
+| Tipo      | Acento         | Normal        | Técnica                      |
+|-----------|----------------|---------------|------------------------------|
+| Normal    | Square 2000Hz  | Square 1500Hz | Oscilador cuadrado, 30ms     |
+| 808       | Cowbell ~900Hz | Rimshot + noise| Square pitch drop + noise burst, 40ms |
+| FL Studio | Sine 2400Hz    | Sine 2000Hz   | Sine ataque rápidísimo (1ms), 18ms |
+| Analógico | Sine 1000Hz    | Sine 800Hz    | Sine ataque suave (6ms), 80ms |
+
+**TAP** — calcula BPM promedio a partir de hasta 5 toques.
+
 - **Afinador**: Algoritmo YIN pitch detection en `lib/tuner.ts`
 - **Analizador**: FFT + peak picking + detección de acordes (Krumhansl-Schmuckler) en `lib/analyzer.ts`
 - **Audio**: Todos los sonidos son procedurales (osciladores Web Audio), sin archivos de audio externos

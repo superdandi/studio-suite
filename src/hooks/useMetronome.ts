@@ -2,7 +2,7 @@
 
 import { useRef, useCallback } from "react";
 import { createClick } from "@/lib/audio";
-import type { SoundType } from "@/lib/audio";
+import type { AccentLevel, SoundType } from "@/lib/audio";
 
 export type RhythmFigure = "quarter" | "eighth" | "triplet" | "sixteenth" | "quintuplet" | "swing" | "dotted";
 
@@ -18,14 +18,34 @@ const FIGURE_DIVISIONS: Record<RhythmFigure, number> = {
 
 export type TimeSignature = "4/4" | "3/4" | "6/8" | "2/4" | "5/4" | "7/8" | "9/8";
 
-const BEATS_PER_BAR: Record<TimeSignature, number> = {
-  "4/4": 4,
-  "3/4": 3,
-  "6/8": 2,
+const EIGHTHS_PER_BAR: Record<TimeSignature, number> = {
+  "2/4": 4,
+  "3/4": 6,
+  "4/4": 8,
+  "5/4": 10,
+  "6/8": 6,
+  "7/8": 7,
+  "9/8": 9,
+};
+
+const DISPLAY_BEATS: Record<TimeSignature, number> = {
   "2/4": 2,
+  "3/4": 3,
+  "4/4": 4,
   "5/4": 5,
+  "6/8": 2,
   "7/8": 7,
   "9/8": 3,
+};
+
+const ACCENT_PATTERNS: Record<TimeSignature, AccentLevel[]> = {
+  "2/4": [2, 0, 0, 0],
+  "3/4": [2, 0, 0, 0, 0, 0],
+  "4/4": [2, 0, 0, 0, 1, 0, 0, 0],
+  "5/4": [2, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+  "6/8": [2, 0, 0, 1, 0, 0],
+  "7/8": [2, 0, 1, 0, 1, 0, 0],
+  "9/8": [2, 0, 0, 1, 0, 0, 1, 0, 0],
 };
 
 export function useMetronome() {
@@ -39,33 +59,33 @@ export function useMetronome() {
     timeSignature: TimeSignature = "4/4",
   ) => {
     const divisions = FIGURE_DIVISIONS[figure];
-    const beatsPerBar = BEATS_PER_BAR[timeSignature];
+    const eighthsPerBar = EIGHTHS_PER_BAR[timeSignature];
+    const pattern = ACCENT_PATTERNS[timeSignature];
     const isSwing = figure === "swing";
     const isDotted = figure === "dotted";
 
-    // Base ms per subdivision (regular)
     const baseMs = (60000 / bpm) / divisions;
 
     let count = 0;
 
     function scheduleNext() {
-      const isAccent = count % divisions === 0;
-      createClick(isAccent, soundType);
+      const eighthPos = Math.floor((count * 2) / divisions);
+      const barEighth = eighthPos % eighthsPerBar;
+      const isBeatStart = count % divisions === 0;
+      const accentLevel: AccentLevel = isBeatStart ? pattern[barEighth] : 0;
+      createClick(accentLevel, soundType);
 
-      const beat = Math.floor(count / divisions) % beatsPerBar;
+      const quarterBeat = Math.floor(count / divisions) % DISPLAY_BEATS[timeSignature];
       const sub = count % divisions;
-      callback(beat, sub, divisions);
+      callback(quarterBeat, sub, divisions);
 
       count++;
 
-      // Calculate delay for the *next* tick
       let delay: number;
       const posInPair = count % 2;
       if (isSwing) {
-        // Swing: 2:1 ratio — first gets 2/3, second gets 1/3
         delay = posInPair === 0 ? baseMs * (4 / 3) : baseMs * (2 / 3);
       } else if (isDotted) {
-        // Dotted (3:1 ratio) — first gets 3/4, second gets 1/4
         delay = posInPair === 0 ? baseMs * 1.5 : baseMs * 0.5;
       } else {
         delay = baseMs;
@@ -74,12 +94,10 @@ export function useMetronome() {
       timerRef.current = window.setTimeout(scheduleNext, delay);
     }
 
-    // First tick fires immediately (no delay)
-    createClick(true, soundType);
+    createClick(2, soundType);
     callback(0, 0, divisions);
     count = 1;
 
-    // Schedule second tick with proper timing
     const firstDelay = isSwing ? baseMs * (4 / 3) : isDotted ? baseMs * 1.5 : baseMs;
     timerRef.current = window.setTimeout(scheduleNext, firstDelay);
   }, []);

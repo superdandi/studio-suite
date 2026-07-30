@@ -13,7 +13,7 @@ Suite de herramientas musicales interactivas con temática cyberpunk. Metrónomo
 
 | Tool  | Tab      | Descripción                                |
 |-------|----------|--------------------------------------------|
-| Pulse | Metrónomo| BPM, 7 figuras (negra a negra c/punto), 7 compases, 4 sonidos, TAP |
+| Pulse | Metrónomo| BPM, 7 figuras, 7 compases con acentuación, 4 sonidos x 3 niveles, TAP |
 | Tune  | Afinador | Chromático / Guitarra / Bajo, detección YIN |
 | Scan  | Analizador | Espectro FFT, forma de onda, detección de acordes y tonalidad |
 | Keys  | Escalas  | Piano interactivo, resaltado de escalas, reproducción |

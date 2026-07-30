@@ -85,61 +85,74 @@ function oscillatorClick(
   osc.stop(t + dur);
 }
 
+export type AccentLevel = 0 | 1 | 2;
 export type SoundType = "normal" | "808" | "flstudio" | "analog";
 
-export function createClick(accent: boolean, soundType: SoundType = "normal"): void {
+export function createClick(accent: AccentLevel, soundType: SoundType = "normal"): void {
   const ctx = getAudioContext();
   const now = ctx.currentTime;
 
   switch (soundType) {
-    case "normal":
-      oscillatorClick(ctx, now, accent ? 2000 : 1500, accent ? 0.3 : 0.15, 0.03);
-      break;
-
-    case "808": {
-      if (accent) {
-        // TR-808 cowbell: metallic pitched tone
-        oscillatorClick(ctx, now, 900, 0.35, 0.04, "square", 800);
-        noiseBurst(ctx, now, 0.015, 0.12);
-      } else {
-        // TR-808 rimshot: noise burst + tonal spike
-        oscillatorClick(ctx, now, 1800, 0.2, 0.025, "sine");
-        noiseBurst(ctx, now, 0.02, 0.25);
-      }
+    case "normal": {
+      const map: Record<AccentLevel, { freq: number; vol: number; dur: number }> = {
+        2: { freq: 2000, vol: 0.30, dur: 0.030 },
+        1: { freq: 1500, vol: 0.15, dur: 0.030 },
+        0: { freq: 1000, vol: 0.05, dur: 0.020 },
+      };
+      const { freq, vol, dur } = map[accent];
+      oscillatorClick(ctx, now, freq, vol, dur);
       break;
     }
 
+    case "808":
+      if (accent === 2) {
+        oscillatorClick(ctx, now, 900, 0.35, 0.040, "square", 800);
+        noiseBurst(ctx, now, 0.015, 0.12);
+      } else if (accent === 1) {
+        oscillatorClick(ctx, now, 1800, 0.20, 0.025, "sine");
+        noiseBurst(ctx, now, 0.020, 0.25);
+      } else {
+        noiseBurst(ctx, now, 0.015, 0.08);
+      }
+      break;
+
     case "flstudio": {
-      // Bright crisp tick — high sine with very fast decay
-      const freq = accent ? 2400 : 2000;
-      const vol = accent ? 0.28 : 0.14;
+      const map: Record<AccentLevel, { freq: number; vol: number; dur: number }> = {
+        2: { freq: 2400, vol: 0.28, dur: 0.018 },
+        1: { freq: 2000, vol: 0.14, dur: 0.018 },
+        0: { freq: 1800, vol: 0.05, dur: 0.012 },
+      };
+      const { freq, vol, dur } = map[accent];
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       osc.type = "sine";
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0, now);
       g.gain.linearRampToValueAtTime(vol, now + 0.001);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+      g.gain.exponentialRampToValueAtTime(0.001, now + dur);
       osc.connect(g).connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.02);
+      osc.stop(now + dur);
       break;
     }
 
     case "analog": {
-      // Analog metronome: soft sine pluck with gentle attack
-      const freq = accent ? 1000 : 800;
-      const vol = accent ? 0.22 : 0.11;
+      const map: Record<AccentLevel, { freq: number; vol: number; dur: number }> = {
+        2: { freq: 1000, vol: 0.22, dur: 0.080 },
+        1: { freq: 800, vol: 0.11, dur: 0.080 },
+        0: { freq: 600, vol: 0.04, dur: 0.060 },
+      };
+      const { freq, vol, dur } = map[accent];
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       osc.type = "sine";
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0, now);
       g.gain.linearRampToValueAtTime(vol, now + 0.006);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      g.gain.exponentialRampToValueAtTime(0.001, now + dur);
       osc.connect(g).connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.08);
+      osc.stop(now + dur);
       break;
     }
   }

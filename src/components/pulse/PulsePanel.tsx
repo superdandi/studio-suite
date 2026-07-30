@@ -13,7 +13,8 @@ const RHYTHM_FIGURES: { value: RhythmFigure; label: string }[] = [
   { value: "triplet", label: "♪♪ Tresillos" },
   { value: "sixteenth", label: "♬ Semicorcheas" },
   { value: "quintuplet", label: "5:5 Quintillo" },
-  { value: "swing", label: "♫ Swing" },
+  { value: "swing", label: "♫ Corchea Swing" },
+  { value: "dotted", label: "♩. ♫ Negra c/punto y corchea" },
 ];
 
 const SOUND_OPTIONS: { value: SoundType; label: string }[] = [

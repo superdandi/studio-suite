@@ -39,9 +39,12 @@ Hook `useMetronome` basado en cadena de `setTimeout` (permite timing irregular p
 | Tresillos  | 3         |
 | Semicorcheas | 4       |
 | Quintillo  | 5         |
-| Swing      | 2 (timing 66/33) |
+| Corchea Swing | 2 (timing 66/33, ratio 2:1) |
+| Negra c/punto y corchea | 2 (timing 75/25, ratio **3:1**) |
 
-**Swing** — las dos subdivisiones de cada pulso no son equitativas: la primera ocupa 2/3 del intervalo y la segunda 1/3. Esto se implementa calculando el delay de cada `setTimeout` individualmente según la posición dentro del par (`count % 2`).
+**Swing** — las dos subdivisiones de cada pulso no son equitativas: la primera ocupa 2/3 del intervalo y la segunda 1/3 (ratio 2:1). Esto se implementa calculando el delay de cada `setTimeout` individualmente según la posición dentro del par (`count % 2`).
+
+**Negra con punto y corchea** — variante de swing con ratio **3:1**. La primera subdivisión ocupa 3/4 del pulso (375ms a 120 BPM) y la segunda 1/4 (125ms). Crea un ritmo puntillado característico de marchas y música barroca.
 
 **Compás** — define los beats por compás que determinan el ciclo de acentos y el display visual:
 - 4/4: 4 beats · 3/4: 3 · 6/8: 2 (subdivisión ternaria) · 2/4: 2

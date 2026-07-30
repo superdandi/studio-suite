@@ -4,7 +4,7 @@ import { useRef, useCallback } from "react";
 import { createClick } from "@/lib/audio";
 import type { SoundType } from "@/lib/audio";
 
-export type RhythmFigure = "quarter" | "eighth" | "triplet" | "sixteenth" | "quintuplet" | "swing";
+export type RhythmFigure = "quarter" | "eighth" | "triplet" | "sixteenth" | "quintuplet" | "swing" | "dotted";
 
 const FIGURE_DIVISIONS: Record<RhythmFigure, number> = {
   quarter: 1,
@@ -13,6 +13,7 @@ const FIGURE_DIVISIONS: Record<RhythmFigure, number> = {
   sixteenth: 4,
   quintuplet: 5,
   swing: 2,
+  dotted: 2,
 };
 
 export type TimeSignature = "4/4" | "3/4" | "6/8" | "2/4" | "5/4" | "7/8" | "9/8";
@@ -40,6 +41,7 @@ export function useMetronome() {
     const divisions = FIGURE_DIVISIONS[figure];
     const beatsPerBar = BEATS_PER_BAR[timeSignature];
     const isSwing = figure === "swing";
+    const isDotted = figure === "dotted";
 
     // Base ms per subdivision (regular)
     const baseMs = (60000 / bpm) / divisions;
@@ -58,11 +60,13 @@ export function useMetronome() {
 
       // Calculate delay for the *next* tick
       let delay: number;
+      const posInPair = count % 2;
       if (isSwing) {
-        // Swing timing: within each beat pair, first is 2/3 of sub-interval,
-        // second is 1/3 — creates the classic long-short feel
-        const posInPair = count % 2;
+        // Swing: 2:1 ratio — first gets 2/3, second gets 1/3
         delay = posInPair === 0 ? baseMs * (4 / 3) : baseMs * (2 / 3);
+      } else if (isDotted) {
+        // Dotted (3:1 ratio) — first gets 3/4, second gets 1/4
+        delay = posInPair === 0 ? baseMs * 1.5 : baseMs * 0.5;
       } else {
         delay = baseMs;
       }
@@ -76,7 +80,7 @@ export function useMetronome() {
     count = 1;
 
     // Schedule second tick with proper timing
-    const firstDelay = isSwing ? baseMs * (4 / 3) : baseMs;
+    const firstDelay = isSwing ? baseMs * (4 / 3) : isDotted ? baseMs * 1.5 : baseMs;
     timerRef.current = window.setTimeout(scheduleNext, firstDelay);
   }, []);
 

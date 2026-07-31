@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -365,6 +365,46 @@ export function getScaleMidi(root: NoteName, scaleType: ScaleType, octave = 4): 
 2. **Usar el BPM del metrónomo** — exportar al tempo configurado en Pulse si está activo.
 
 **Verificación**: parseo del MIDI generado — primer nota = `noteToMidi(root, 4)`, cantidad de eventos = `2 × notas` (on+off) + tempo + program + end, y división/tempo correctos. Build + deploy + revisión manual importando `slendro-F-ascdesc.mid` en un DAW.
+
+#### Mapeo de teclado físico (tocar el piano en pantalla)
+
+**Objetivo**: permitir tocar el piano C4–B5 con el teclado físico. Como las 24 notas (2 octavas) no caben en una sola fila de QWERTY, se separan en dos filas/columnas: la primera octava usa la fila de números (`q w e r t y u` blancas, `2 3 5 6 7` negras) y la segunda octava la fila inferior (`v b n m , . -` blancas, `g h k l ñ` negras).
+
+La secuencia completa de teclas en orden ascendente de nota es:
+
+```
+q 2 w 3 e r 5 t 6 y 7 u   v g b h n m k , l . ñ -
+```
+
+que son exactamente las 24 notas de C4 (MIDI 60) a B5 (MIDI 83). El mapeo se genera **programáticamente** en `lib/music-theory.ts` (índice `i` → MIDI `60 + i`), sin tabla manual:
+
+```ts
+export const KEYBOARD_KEY_SEQUENCE = ["q","2","w","3","e","r","5","t","6","y","7","u",
+                                       "v","g","b","h","n","m","k",",","l",".","ñ","-"] as const;
+export const KEYBOARD_KEY_TO_MIDI: Record<string, number> = {};
+export const MIDI_TO_KEYBOARD_KEY: Record<number, string> = {};
+// for i: KEYBOARD_KEY_TO_MIDI[key] = 60 + i;  MIDI_TO_KEYBOARD_KEY[60 + i] = key;
+```
+
+| Octava | Blancas | Negras/semitonos |
+|---|---|---|
+| 1ª (C4–B4) | `q` C `w` D `e` E `r` F `t` G `y` A `u` B | `2` C# `3` D# `5` F# `6` G# `7` A# |
+| 2ª (C5–B5) | `v` C `b` D `n` E `m` F `,` G `.` A `-` B | `g` C# `h` D# `k` F# `l` G# `ñ` A# |
+
+**Implementación**:
+- `components/keys/KeysPanel.tsx`: `useEffect` con listeners `keydown`/`keyup` en `window` (viven dentro del panel, que solo se monta en la vista Keys → se limpian al salir).
+  - `keydown`: se ignoran `e.repeat` (autorepetición) y modificadores `metaKey`/`ctrlKey`/`altKey` (no roban atajos del navegador). Se busca `KEYBOARD_KEY_TO_MIDI[e.key.toLowerCase()]`; si existe → `e.preventDefault()`, se agrega a `activeNotes` (resaltado en pantalla) y se reproduce con `playMidi`.
+  - `keyup`: quita la nota de `activeNotes`. El cleanup elimina ambos listeners y vacía `activeNotes`.
+  - `playMidi(midi)` se extrae del `onNoteClick` anterior (nombre + octava → `playNote`) y lo reutilizan tanto el canvas como el teclado físico.
+- `components/keys/PianoKeyboard.tsx`: nuevas props `activeNotes` y `showLabels`.
+  - Notas activas → overlay ámbar `#ffdd44` con glow, visualmente distinto del cyan/rosa de la escala.
+  - `showLabels` → dibuja la tecla física correspondiente (`MIDI_TO_KEYBOARD_KEY[midi]`) en la base de cada tecla del canvas.
+- Toggle **`TECLAS: ON/OFF`** bajo el piano controla `showLabels` (default ON) + leyenda de dos filas con las teclas mapeadas, generada desde `KEYBOARD_KEY_SEQUENCE`.
+
+**Notas**:
+- Requiere **teclado español** (`ñ` directa; `,` `.` `-` en la fila QWERTY). En layout US no existe `ñ`.
+- `e.key` se normaliza a minúscula; con Shift la fila de números produce símbolos (`2`→`@`) que no están mapeados → no colisionan.
+- `preventDefault` solo sobre las teclas mapeadas; el resto del teclado conserva su comportamiento.
 
 ## Build
 

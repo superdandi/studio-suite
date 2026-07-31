@@ -30,6 +30,21 @@ export function frequencyToNote(freq: number): { note: NoteName; octave: number;
   return { note, octave, midi, cents };
 }
 
+export const KEYBOARD_KEY_SEQUENCE = [
+  "q", "2", "w", "3", "e", "r", "5", "t", "6", "y", "7", "u",
+  "v", "g", "b", "h", "n", "m", "k", ",", "l", ".", "ñ", "-",
+] as const;
+
+export const KEYBOARD_KEY_TO_MIDI: Record<string, number> = {};
+export const MIDI_TO_KEYBOARD_KEY: Record<number, string> = {};
+
+for (let i = 0; i < KEYBOARD_KEY_SEQUENCE.length; i++) {
+  const key = KEYBOARD_KEY_SEQUENCE[i];
+  const midi = 60 + i;
+  KEYBOARD_KEY_TO_MIDI[key] = midi;
+  MIDI_TO_KEYBOARD_KEY[midi] = key;
+}
+
 export function noteToMidi(note: NoteName, octave: number): number {
   return NOTE_NAMES.indexOf(note) + (octave + 1) * 12;
 }

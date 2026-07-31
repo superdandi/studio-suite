@@ -10,6 +10,8 @@ import {
   getScaleNotes,
   getScaleMidi,
   getScaleMidiSequence,
+  KEYBOARD_KEY_SEQUENCE,
+  KEYBOARD_KEY_TO_MIDI,
   type NoteName,
   type ScaleType,
 } from "@/lib/music-theory";
@@ -45,7 +47,41 @@ export default function KeysPanel() {
   const [highlightedNotes, setHighlightedNotes] = useState<number[]>([]);
   const [ascPlaying, setAscPlaying] = useState(false);
   const [ascDescPlaying, setAscDescPlaying] = useState(false);
+  const [activeNotes, setActiveNotes] = useState<number[]>([]);
+  const [showLabels, setShowLabels] = useState(true);
   const scalePlayer = useScalePlayer();
+
+  const playMidi = useCallback(
+    (midi: number) => {
+      const noteName = NOTE_NAMES[midi % 12];
+      const octave = Math.floor(midi / 12) - 1;
+      scalePlayer.playNote(noteName, octave);
+    },
+    [scalePlayer],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      const midi = KEYBOARD_KEY_TO_MIDI[e.key.toLowerCase()];
+      if (midi === undefined) return;
+      e.preventDefault();
+      setActiveNotes((prev) => (prev.includes(midi) ? prev : [...prev, midi]));
+      playMidi(midi);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      const midi = KEYBOARD_KEY_TO_MIDI[e.key.toLowerCase()];
+      if (midi === undefined) return;
+      setActiveNotes((prev) => prev.filter((m) => m !== midi));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      setActiveNotes([]);
+    };
+  }, [playMidi]);
 
   const togglePlay = useCallback((mode: "asc" | "ascdesc") => {
     if (mode === "asc") {
@@ -141,12 +177,34 @@ export default function KeysPanel() {
             octaves={2}
             highlightedNotes={highlightedNotes}
             rootNote={root}
-            onNoteClick={(midi) => {
-              const noteName = NOTE_NAMES[midi % 12];
-              const octave = Math.floor(midi / 12) - 1;
-              scalePlayer.playNote(noteName, octave);
-            }}
+            activeNotes={activeNotes}
+            showLabels={showLabels}
+            onNoteClick={playMidi}
           />
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex flex-wrap gap-1">
+              {[KEYBOARD_KEY_SEQUENCE.slice(0, 12), KEYBOARD_KEY_SEQUENCE.slice(12)].map((row, r) => (
+                <div key={r} className="flex gap-1">
+                  {row.map((k) => (
+                    <span key={k} className="px-1.5 py-0.5 rounded border border-[#2a2a4a] text-[#8888aa] text-[10px] font-mono">
+                      {k}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowLabels((s) => !s)}
+              className={`px-3 py-1 rounded border text-[10px] font-mono transition-all ${
+                showLabels
+                  ? "border-[#ffdd44]/60 text-[#ffdd44] bg-[#ffdd44]/10"
+                  : "border-[#2a2a4a] text-[#8888aa] hover:border-[#ffdd44]/50"
+              }`}
+              title="Mostrar u ocultar las etiquetas de teclas sobre el piano"
+            >
+              TECLAS: {showLabels ? "ON" : "OFF"}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col items-center gap-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback } from "react";
-import { NOTE_NAMES } from "@/lib/music-theory";
+import { NOTE_NAMES, MIDI_TO_KEYBOARD_KEY } from "@/lib/music-theory";
 
 const WHITE_KEYS = [0, 2, 4, 5, 7, 9, 11];
 const KEY_WIDTH = 40;
@@ -14,6 +14,8 @@ interface PianoKeyboardProps {
   octaves: number;
   highlightedNotes: number[];
   rootNote: string;
+  activeNotes?: number[];
+  showLabels?: boolean;
   onNoteClick: (midi: number) => void;
 }
 
@@ -22,6 +24,8 @@ export default function PianoKeyboard({
   octaves,
   highlightedNotes,
   rootNote,
+  activeNotes = [],
+  showLabels = true,
   onNoteClick,
 }: PianoKeyboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,6 +43,24 @@ export default function PianoKeyboard({
     const h = canvas.height;
 
     ctx.clearRect(0, 0, w, h);
+
+    const isActive = (midi: number) => activeNotes.includes(midi);
+    const drawKeyLabel = (x: number, y: number, midi: number) => {
+      if (!showLabels) return;
+      const label = MIDI_TO_KEYBOARD_KEY[midi];
+      if (!label) return;
+      ctx.fillStyle = isActive(midi) ? "#ffdd44" : "#3a3a5a";
+      ctx.font = "10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(label, x, y);
+    };
+    const drawActiveGlow = (x: number, y: number, wd: number, ht: number) => {
+      ctx.shadowColor = "#ffdd44";
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = "rgba(255, 221, 68, 0.35)";
+      ctx.fillRect(x, y, wd, ht);
+      ctx.shadowBlur = 0;
+    };
 
     // Draw white keys
     let whiteKeyIndex = 0;
@@ -60,6 +82,10 @@ export default function PianoKeyboard({
         ctx.lineWidth = isHighlighted ? 2 : 1;
         ctx.strokeRect(x, 0, KEY_WIDTH - 1, KEY_HEIGHT);
 
+        if (isActive(midi)) {
+          drawActiveGlow(x, 0, KEY_WIDTH - 1, KEY_HEIGHT);
+        }
+
         if (isHighlighted) {
           ctx.shadowColor = isRoot ? "#ff00ff" : "#00ffff";
           ctx.shadowBlur = 10;
@@ -67,6 +93,8 @@ export default function PianoKeyboard({
           ctx.fillRect(x, 0, KEY_WIDTH - 1, KEY_HEIGHT);
           ctx.shadowBlur = 0;
         }
+
+        drawKeyLabel(x + KEY_WIDTH / 2, KEY_HEIGHT - 10, midi);
 
         whiteKeyIndex++;
       }
@@ -93,6 +121,10 @@ export default function PianoKeyboard({
         ctx.lineWidth = isHighlighted ? 2 : 1;
         ctx.strokeRect(x, 0, BLACK_KEY_WIDTH, BLACK_KEY_HEIGHT);
 
+        if (isActive(midi)) {
+          drawActiveGlow(x, 0, BLACK_KEY_WIDTH, BLACK_KEY_HEIGHT);
+        }
+
         if (isHighlighted) {
           ctx.shadowColor = "#00ffff";
           ctx.shadowBlur = 10;
@@ -101,10 +133,12 @@ export default function PianoKeyboard({
           ctx.shadowBlur = 0;
         }
 
+        drawKeyLabel(x + BLACK_KEY_WIDTH / 2, BLACK_KEY_HEIGHT - 8, midi);
+
         whiteKeyIndex++;
       }
     }
-  }, [startOctave, octaves, highlightedNotes, rootNote]);
+  }, [startOctave, octaves, highlightedNotes, rootNote, activeNotes, showLabels]);
 
   useEffect(() => {
     draw();

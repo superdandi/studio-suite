@@ -102,6 +102,7 @@ export default function KeysPanel() {
         setAscPlaying(false);
         setAscDescPlaying(false);
         setActiveNotes([]);
+        setShowLabels(false);
       }
       return next;
     });

@@ -436,8 +436,8 @@ Resultado: **bucle de renders infinito** donde `playScale()` reiniciaba el patr�
 **Comportamiento**:
 - El botón tipo switch bajo el piano alterna entre `MODO: TECLADO` y `MODO: PIANOLA` (default TECLADO).
 - En PIANOLA, los handlers de teclado retornan temprano (`if (!playableKeyboard) return`): no suenan ni tocan `activeNotes`.
-- Al **cambiar de modo se detiene la escala en reproducción** (`stopScale()` + `setAscPlaying(false)` + `setAscDescPlaying(false)`) y se vacía `activeNotes`.
-- El toggle `TECLAS: ON/OFF` solo se muestra en modo TECLADO: en PIANOLA no tiene sentido mostrar los bindings. La leyenda de chips bajo el piano se eliminó (redundante con las etiquetas del canvas).
+- Al **cambiar de modo se detiene la escala en reproducción** (`stopScale()` + `setAscPlaying(false)` + `setAscDescPlaying(false)`), se vacía `activeNotes` y se fuerza **`TECLAS: OFF`** (`setShowLabels(false)`).
+- El toggle `TECLAS: ON/OFF` solo se muestra en modo TECLADO: en PIANOLA no tiene sentido mostrar los bindings. La leyenda de chips bajo el piano se eliminó (redundante con las etiquetas del canvas). Como el toggle desaparece al pasar a PIANOLA, el cambio de modo **apaga las etiquetas automáticamente** para que los bindings no queden activos sin control; al volver a TECLADO arrancan en OFF hasta que el usuario las reactive.
 
 **Highlights de escala/tónica**: nunca se perdieron; cyan = notas de la escala, magenta = tónica, visibles en ambos modos (estaban en `PianoKeyboard.tsx` desde la implementación original de escalas). El bucle de renders del bug anterior hacía parecer el panel inestable, pero el dibujado siempre estuvo activo.
 

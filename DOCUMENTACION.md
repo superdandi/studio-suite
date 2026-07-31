@@ -266,6 +266,40 @@ Las escalas no occidentales se aproximan al sistema de 12 semitonos (temperament
 3. `hooks/useScalePlayer.ts`: refactor a loop con cadena de `setTimeout` — `playScale(root, type, mode)` con modos `asc` y `ascdesc`, y `stopScale()`.
 4. `components/keys/PianoKeyboard.tsx`: fix de teclas negras para que el teclado empiece en **Do** (C4 en x=0). La posición actual calcula `x = whiteKeyIndex * KEY_WIDTH - BLACK_KEY_WIDTH/2`, lo que dibuja la negra C# en **x=-12** (sobresale por la izquierda y parece que el teclado empieza a la mitad de C#). Corrección: `x = (whiteKeyIndex + 1) * KEY_WIDTH - BLACK_KEY_WIDTH / 2` en `draw` y `handleClick` → C# queda centrada en el límite C/D (x=28).
 
+#### Bug resuelto: nota raíz duplicada en el giro inferior de ascdesc
+
+**Síntoma**: al reproducir la escala en modo **ASC+DESC**, la última nota del descenso (la raíz) sonaba de nuevo inmediatamente al arrancar el ascenso siguiente. Se percibía como una nota repetida en el bucle, en **todas** las escalas.
+
+**Causa raíz** en `useScalePlayer.ts`: la secuencia `ascdesc` se construía como:
+
+```js
+const sequence = [...freqs, ...freqs.slice(0, -1).reverse()];
+```
+
+Para C mayor (`freqs = [C, D, E, F, G, A, B]`) el resultado era:
+
+```
+[C, D, E, F, G, A, B,  A, G, F, E, D, C]
+                                 ↑ slice(0,-1).reverse() termina en la raíz
+```
+
+El loop envolvente `...E D C` → `C D E F…` reproducía la raíz **C dos veces consecutivas**. El bug es genérico: `slice(0, -1)` incluye siempre la raíz (índice 0) al final del descenso, para cualquier escala de cualquier longitud.
+
+**Corrección aplicada**: usar `slice(1, -1)` para excluir la raíz del tramo descendente:
+
+```js
+const sequence = mode === "asc" ? freqs : [...freqs, ...freqs.slice(1, -1).reverse()];
+```
+
+Resultado para C mayor: `[C, D, E, F, G, A, B,  A, G, F, E, D]` (12 notas). El descenso termina en el 2º grado (D) y el loop conecta `...F E D` → `C D E F…` con un paso natural, sin repetir nota.
+
+**Aplica a todas las escalas** (la lógica es independiente de la escala):
+- 7 notas (mayor, menores, modos, árabes, indias): `[...0..6, ...slice(1,-1).reverse()]` = 12 notas
+- 5 notas (pentatónicas, hirajoshi, pelog, slendro, africana): `[0,1,2,3,4] + [3,2,1]` = 8 notas
+- 6 notas (tonos enteros): `[0..5] + [4,3,2,1]` = 10 notas
+- 8 notas (octatónica): `[0..7] + [6..1]` = 14 notas
+- 12 notas (cromática): `[0..11] + [10..1]` = 22 notas
+
 ## Build
 
 ```bash

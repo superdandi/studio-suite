@@ -45,7 +45,7 @@ export function useScalePlayer() {
     });
 
     const sequence: number[] =
-      mode === "asc" ? freqs : [...freqs, ...freqs.slice(0, -1).reverse()];
+      mode === "asc" ? freqs : [...freqs, ...freqs.slice(1, -1).reverse()];
 
     let i = 0;
 

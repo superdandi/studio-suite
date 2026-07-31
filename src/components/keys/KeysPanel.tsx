@@ -15,6 +15,7 @@ import {
   type ScaleType,
 } from "@/lib/music-theory";
 import { buildScaleMidi, triggerDownload } from "@/lib/midi";
+import { PIANOLA_PIECES } from "@/lib/pieces";
 
 const SCALE_CATEGORIES: { label: string; types: ScaleType[] }[] = [
   { label: "Mayor", types: ["major"] },
@@ -49,6 +50,8 @@ export default function KeysPanel() {
   const [activeNotes, setActiveNotes] = useState<number[]>([]);
   const [showLabels, setShowLabels] = useState(true);
   const [playableKeyboard, setPlayableKeyboard] = useState(true);
+  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
+  const [piecePlaying, setPiecePlaying] = useState(false);
   const scalePlayer = useScalePlayer();
 
   const playMidi = useCallback(
@@ -85,6 +88,7 @@ export default function KeysPanel() {
   }, [playMidi, playableKeyboard]);
 
   const togglePlay = useCallback((mode: "asc" | "ascdesc") => {
+    setPiecePlaying(false);
     if (mode === "asc") {
       setAscPlaying((p) => !p);
       setAscDescPlaying(false);
@@ -93,6 +97,16 @@ export default function KeysPanel() {
       setAscPlaying(false);
     }
   }, []);
+
+  const togglePiece = useCallback((id: string) => {
+    setAscPlaying(false);
+    setAscDescPlaying(false);
+    setSelectedPieceId((prev) => {
+      const next = prev === id ? !piecePlaying : true;
+      setPiecePlaying(next);
+      return id;
+    });
+  }, [piecePlaying]);
 
   const togglePlayableKeyboard = useCallback(() => {
     setPlayableKeyboard((p) => {
@@ -103,6 +117,10 @@ export default function KeysPanel() {
         setAscDescPlaying(false);
         setActiveNotes([]);
         setShowLabels(false);
+      } else {
+        scalePlayer.stopScale();
+        setPiecePlaying(false);
+        setActiveNotes([]);
       }
       return next;
     });
@@ -127,14 +145,21 @@ export default function KeysPanel() {
   const scaleNotes = getScaleNotes(root, scaleType);
 
   useEffect(() => {
-    if (ascPlaying) {
+    const selectedPiece = selectedPieceId
+      ? PIANOLA_PIECES.find((p) => p.id === selectedPieceId) ?? null
+      : null;
+    if (piecePlaying && selectedPiece) {
+      scalePlayer.playPiece(selectedPiece, (midi) => {
+        setActiveNotes(midi === null ? [] : [midi]);
+      });
+    } else if (ascPlaying) {
       scalePlayer.playScale(root, scaleType, "asc");
     } else if (ascDescPlaying) {
       scalePlayer.playScale(root, scaleType, "ascdesc");
     } else {
       scalePlayer.stopScale();
     }
-  }, [root, scaleType, ascPlaying, ascDescPlaying, scalePlayer]);
+  }, [root, scaleType, ascPlaying, ascDescPlaying, piecePlaying, selectedPieceId, scalePlayer]);
 
   return (
     <ToolContainer title="Keys" icon="🎹">
@@ -183,6 +208,28 @@ export default function KeysPanel() {
                 </div>
               </div>
             ))}
+            {!playableKeyboard && (
+              <div key="pieces">
+                <p className="text-xs text-[#555] mb-1">Piezas de pianola</p>
+                <div className="flex flex-wrap gap-1">
+                  {PIANOLA_PIECES.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => togglePiece(p.id)}
+                      className={`px-3 py-1 rounded border text-xs transition-all ${
+                        piecePlaying && selectedPieceId === p.id
+                          ? "border-[#ff4455] text-[#ff4455] bg-[#ff4455]/10"
+                          : "border-[#2a2a4a] text-[#8888aa] hover:border-[#ff4455]/50"
+                      }`}
+                      title={`${p.name} · ${p.composer} · ${p.tempo} BPM`}
+                    >
+                      {piecePlaying && selectedPieceId === p.id ? "■ " : "▶ "}
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -264,11 +311,13 @@ export default function KeysPanel() {
             </button>
           </div>
           <p className="text-xs text-[#555]">
-            {ascPlaying
-              ? "Reproduciendo escala ascendente en bucle…"
-              : ascDescPlaying
-                ? "Reproduciendo escala ascendente + descendente en bucle…"
-                : "Pulsá para reproducir en bucle hasta detener."}
+            {piecePlaying
+              ? `Reproduciendo pieza en bucle…`
+              : ascPlaying
+                ? "Reproduciendo escala ascendente en bucle…"
+                : ascDescPlaying
+                  ? "Reproduciendo escala ascendente + descendente en bucle…"
+                  : "Pulsá para reproducir en bucle hasta detener."}
           </p>
         </div>
 

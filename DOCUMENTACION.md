@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -440,6 +440,49 @@ Resultado: **bucle de renders infinito** donde `playScale()` reiniciaba el patr�
 - El toggle `TECLAS: ON/OFF` solo se muestra en modo TECLADO: en PIANOLA no tiene sentido mostrar los bindings. La leyenda de chips bajo el piano se eliminó (redundante con las etiquetas del canvas). Como el toggle desaparece al pasar a PIANOLA, el cambio de modo **apaga las etiquetas automáticamente** para que los bindings no queden activos sin control; al volver a TECLADO arrancan en OFF hasta que el usuario las reactive.
 
 **Highlights de escala/tónica**: nunca se perdieron; cyan = notas de la escala, magenta = tónica, visibles en ambos modos (estaban en `PianoKeyboard.tsx` desde la implementación original de escalas). El bucle de renders del bug anterior hacía parecer el panel inestable, pero el dibujado siempre estuvo activo.
+
+#### Piezas de pianola (Para Elisa, The Entertainer, El Cóndor Pasa)
+
+**Objetivo**: completar el modo PIANOLA con **piezas auto-reproducidas** estilo pianola clásica (los rollos que la pianola "tocaba solos"). Se agregan 3 piezas procedurales — 1 clásica, 1 ragtime, 1 folklórica — como categoría nueva debajo de las categorías de escalas, **visible solo en modo PIANOLA**.
+
+**Piezas elegidas** (todas de dominio público, adaptaciones simplificadas a una línea melódica):
+
+| Pieza | Género | Composer/origen | Tempo |
+|---|---|---|---|
+| **Para Elisa** | Clásica | Beethoven | **84 BPM** |
+| **The Entertainer** | Ragtime | Scott Joplin | **120 BPM** |
+| **El Cóndor Pasa** | Folklórica | Melodía andina tradicional | **100 BPM** |
+
+**Modelo de datos** (`src/lib/pieces.ts`, nuevo):
+
+```ts
+type PieceNote = { midi: number | null; beats: number };  // null = silencio (solo delay)
+type Piece = { id: string; name: string; genre: string; tempo: number; notes: PieceNote[] };
+```
+
+- Las melodías se escriben a mano como líneas simples (estilo rollo de pianola), **constreñidas a MIDI 60–83** (C4–B5) para que el resaltado del canvas las muestre completo.
+- `beats` expresa duración relativa al tempo (fracciones de negra; la fórmula de ms es `beats × 60000 / tempo`). Los tempos reales implementados se ajustan al carácter de cada pieza (84/120/100 BPM).
+- `midi: null` representa un **silencio**: no suena nada pero consume su tiempo, permitiendo frases con pausas reales.
+- El rango MIDI 60–83 (C4–B5) se verificó por simulación en Node para las 3 piezas: todas las notas quedan dentro del rango visible del canvas.
+
+**Player** (`src/hooks/useScalePlayer.ts`): se agrega `playPiece(piece, onNote)` reutilizando la misma infraestructura que `playScale`:
+- Cadena de `setTimeout` con `delay = beats × 60000 / tempo` por nota (mismo patrón de timing variable que `useMetronome`).
+- Los silencios (`midi === null`) solo reprograman el timer, sin `playNoteFn`.
+- **Bucle infinito**: al llegar al final, `i` vuelve a 0 (estilo rollo de pianola) hasta `stopScale()`.
+- `onNote(midi | null)` se invoca en cada paso → KeysPanel actualiza `activeNotes` para el glow ámbar en tiempo real. Para silencios se llama con `null` para limpiar el resaltado.
+- Se reutiliza `stopScale()` (mismo `timerRef`) para detener la pieza; la identidad estable se mantiene vía `useMemo`.
+
+**UI** (`src/components/keys/KeysPanel.tsx`):
+- Nuevo estado: `selectedPieceId` y `piecePlaying`.
+- Categoría **"Piezas"** debajo de `SCALE_CATEGORIES`, renderizada **solo si `!playableKeyboard`** (modo PIANOLA), mismo estilo de chips que las escalas.
+- Click en chip de pieza = toggle play/stop (patrón de los botones de escala). Al arrancar una pieza se apagan `ascPlaying`/`ascDescPlaying`; al arrancar una escala se apaga la pieza.
+- Un **único `useEffect` de reproducción** orquesta todo (pieza > escala asc > escala asc+desc > `stopScale()`), evitando reproducción simultánea.
+- Al cambiar a modo TECLADO: se detiene la pieza y se limpia `piecePlaying`/`activeNotes` (la categoría desaparece).
+- Status text: "Reproduciendo pieza…" cuando aplica.
+
+**No incluido** (alcance): descarga MIDI de piezas — `buildScaleMidi` es específico de patrones de escala. Posible iteración futura.
+
+**Verificación**: simulación en Node — todas las notas dentro de 60–83 y duración total por ciclo razonable; build estático; revisión manual reproduciendo las 3 piezas en modo PIANOLA.
 
 ## Build
 

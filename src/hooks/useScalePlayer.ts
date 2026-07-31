@@ -9,6 +9,7 @@ import {
   type ScaleType,
   getScaleMidiSequence,
 } from "@/lib/music-theory";
+import type { Piece } from "@/lib/pieces";
 
 export type ScalePlayMode = "asc" | "ascdesc";
 
@@ -60,5 +61,34 @@ export function useScalePlayer() {
     playNoteFn(freq, 0.5, "sine", 0.3);
   }, []);
 
-  return useMemo(() => ({ playScale, stopScale, playNote }), [playScale, stopScale, playNote]);
+  const playPiece = useCallback((piece: Piece, onNote: (midi: number | null) => void) => {
+    stopScale();
+    const beatMs = 60000 / piece.tempo;
+
+    let i = 0;
+
+    function scheduleNext() {
+      const note = piece.notes[i];
+      if (note.midi !== null) {
+        const freq = midiToFrequency(note.midi);
+        playNoteFn(freq, Math.min(0.6, note.beats * beatMs * 0.001), "sine", 0.3);
+      }
+      onNote(note.midi);
+      i = (i + 1) % piece.notes.length;
+      timerRef.current = window.setTimeout(scheduleNext, note.beats * beatMs);
+    }
+
+    const first = piece.notes[0];
+    if (first.midi !== null) {
+      playNoteFn(midiToFrequency(first.midi), Math.min(0.6, first.beats * beatMs * 0.001), "sine", 0.3);
+    }
+    onNote(first.midi);
+    i = 1;
+    timerRef.current = window.setTimeout(scheduleNext, first.beats * beatMs);
+  }, [stopScale]);
+
+  return useMemo(
+    () => ({ playScale, stopScale, playNote, playPiece }),
+    [playScale, stopScale, playNote, playPiece],
+  );
 }

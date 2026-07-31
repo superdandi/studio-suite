@@ -221,7 +221,7 @@ export default function RhodesControls() {
           />
           <Slider
             label="Brightness"
-            value={brightnessCutoff((settings.brightness - 500) / 19500)}
+            value={(settings.brightness - 500) / 19500}
             min={0}
             max={1}
             step={0.01}

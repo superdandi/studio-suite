@@ -564,6 +564,10 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 
 **Verificación**: simulación Node del bus — valores de controls dentro de rango, matemática de tremolo (`1±depth`), decay (multiplicador de duración), curva de drive (identidad en 0, saturación creciente), cutoff logarítmico de brightness, IR de reverb con decaimiento exponencial, y que todos los setters existen; build estático; revisión manual girando knobs mientras se reproduce una escala y una pieza.
 
+#### Registro de bugs
+
+- **[Arreglado] Slider de Brightness clavado en el extremo derecho (Keys)** — al soltar los efectos de la fase 2, la manecilla del slider de Brightness quedaba pegada al extremo derecho y no respondía al arrastre. **Causa**: en `RhodesControls.tsx` el `value` del slider se pasaba envuelto en `brightnessCutoff((brightness − 500)/19500)`. `brightnessCutoff(pos)` convierte una posición normalizada 0–1 en Hz (500→20000), así que con el default `brightness=20000` el `value` resultaba **20000 Hz** mientras el input tenía `min={0}` `max={1}`: el navegador recortaba el valor a 1 (extremo derecho) y, como cada arrastre recalcula un valor ≫ 1, React siempre lo re-recortaba a 1 → la manecilla nunca se movía. **Solución**: pasar la posición normalizada directamente como `value={(brightness − 500)/19500}` (el `onChange` y el `format` ya usaban `brightnessCutoff(v)` correctamente). El slider conserva la escala logarítmica documentada y el thumb se mueve libremente.
+
 ## Build
 
 ```bash

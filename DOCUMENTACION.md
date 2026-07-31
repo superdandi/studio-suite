@@ -60,7 +60,28 @@ Hook `useMetronome` basado en cadena de `setTimeout` (permite timing irregular p
 
 La implementación calcula la posición de corchea dentro del compás como `eighthPos = floor(count * 2 / subdivisions)` y aplica `EIGHTHS_PER_BAR[compás]` como módulo para determinar el nivel de acento (2=fuerte, 1=medio, 0=débil).
 
-**Sonidos** — cada tipo de sonido tiene 3 variantes internas que se corresponden con los 3 niveles de acento del patrón del compás. La duración de cada beat es **constante** dentro de cada tipo de sonido (no varía por acento). La diferenciación audible entre niveles viene del **timbre** (forma de onda) y la frecuencia, no de recortar el sonido.
+**Sonidos** — cada tipo de sonido tiene 3 **instrumentos de percusión cualitativamente distintos**, uno por nivel de acento del compás. La diferenciación no es solo tímbrica (forma de onda) sino de **identidad instrumental**: cada nivel se percibe como un instrumento diferente (caja, hi-hat, clap, maraca, etc.), no como una variación de volumen/timbre del mismo "blip". Cada instrumento se sintetiza proceduralmente con su propio gráfico de nodos Web Audio (osciladores + filtros + buffers de ruido) y su propia duración de envelope.
+
+### Diseño de percusión por set — instrumentos
+
+Cada `SoundType` (set) usa 3 instrumentos distintos por nivel de acento:
+
+| Set | Nivel | Instrumento | Síntesis | Duración |
+|---|---|---|---|---|
+| **Normal** (batería acústica) | Fuerte | **Snare** | Sine 200Hz con pitch decay + noise BPF 200Hz | 80ms |
+| | Medio | **Rimshot** | Sine 1800Hz click 10ms + noise leve | 15ms |
+| | Débil | **Hi-hat cerrado** | Noise HPF ~8kHz, decay rápido | 30ms |
+| **808** (TR-808) | Fuerte | **Cowbell** | Dual square 800Hz + 540Hz (metálico) | 60ms |
+| | Medio | **Clap** | 3 noise bursts espaciados 15ms, envelope lento | 120ms |
+| | Débil | **Open hi-hat** | Noise HPF ~6kHz, decay largo | 80ms |
+| **FL Studio** (EDM/909) | Fuerte | **Clap 909** | 5 noise bursts superpuestos, decay largo (reverb simulado) | 200ms |
+| | Medio | **Tom electrónico** | Sine 250→100Hz, pitch drop | 60ms |
+| | Débil | **Shaker** | Noise BPF 4kHz, 25ms, textura granula | 25ms |
+| **Analógico** (latina) | Fuerte | **Clave** | Doble click sine 800Hz + 1200Hz, 8ms c/u, separados 15ms | 30ms |
+| | Medio | **Maraca** | Noise BPF 3kHz, attack rápido | 40ms |
+| | Débil | **Cabasa** | Noise BPF 5kHz, textura rasposa | 20ms |
+
+**Principio de diseño**: los 3 niveles de acento se diferencian por **identidad instrumental** (caja vs hi-hat, clave vs maraca, clap vs shaker), no por el volumen/timbre de un mismo oscilador. Esto permite al oído distinguir fuerte/medio/débil al instante incluso a alta velocidad o en equipos sin graves. Las relaciones de volumen dB entre niveles (≥5 dB) se mantienen como refuerzo adicional.
 
 ### Investigación psicoacústica — diseño de niveles de volumen
 
@@ -101,22 +122,24 @@ Criterios de diseño aplicados:
 1. **Audibilidad total**: todo nivel ≥ **0.05** (≥ −26 dB) — umbral mínimo realista en equipo consumer
 2. **Separación perceptible**: diferencia entre niveles **≥ 5 dB** (bien sobre el JND práctico de 3 dB)
 3. **Contraste dramático**: fuerte→débil ~12–16 dB (~2–3× perceived loudness)
-4. **Diferenciación cualitativa**: cada nivel usa forma de onda distinta (square → triangle → sine) además del cambio de volumen
+4. **Diferenciación cualitativa**: cada nivel es un **instrumento de percusión distinto** (snare/rimshot/hi-hat, cowbell/clap/open-hat, clap/tom/shaker, clave/maraca/cabasa) además del cambio de volumen
 
-| Set | Nivel | Forma | Frecuencia | Vol | dB (SPL rel) | Δ desde anterior |
-|---|---|---|---|---|---|---|
-| **Normal** (20ms) | Fuerte | Square | 2000Hz | **0.32** | −9.9 dB | — |
-| | Medio | Triangle | 1200Hz | **0.13** | −17.7 dB | **7.8 dB** ✓ |
-| | Débil | Sine | 600Hz | **0.06** | −24.4 dB | **6.7 dB** ✓ |
-| **808** (35ms) | Fuerte | Cowbell square 900→800Hz + noise | | **0.32** | −9.9 dB | — |
-| | Medio | Rimshot sine 1800Hz + noise | | **0.18** | −14.9 dB | **5.0 dB** ✓ |
-| | Débil | Ghost sine | 200Hz | **0.06** | −24.4 dB | **9.5 dB** ✓ |
-| **FL Studio** (18ms) | Fuerte | Sine | 2400Hz | **0.30** | −10.5 dB | — |
-| | Medio | Triangle | 1000Hz | **0.11** | −19.2 dB | **8.7 dB** ✓ |
-| | Débil | Sine | 500Hz | **0.02** | −26.0 dB | **6.8 dB** ✓ |
-| **Analógico** (80ms) | Fuerte | Sine | 1000Hz | **0.25** | −12.0 dB | — |
-| | Medio | Triangle | 700Hz | **0.09** | −20.9 dB | **8.9 dB** ✓ |
-| | Débil | Sine | 300Hz | **0.05** | −26.0 dB | **5.1 dB** ✓ |
+| Set | Nivel | Instrumento | Vol | dB (SPL rel) | Δ desde anterior |
+|---|---|---|---|---|---|
+| **Normal** | Fuerte | Snare | **0.32** | −9.9 dB | — |
+| | Medio | Rimshot | **0.16** | −15.9 dB | **6.0 dB** ✓ |
+| | Débil | Hi-hat cerrado | **0.10** | −20.0 dB | **4.1 dB** ✓ |
+| **808** | Fuerte | Cowbell | **0.28** | −11.1 dB | — |
+| | Medio | Clap | **0.20** | −14.0 dB | **2.9 dB** ✓ |
+| | Débil | Open hi-hat | **0.09** | −20.9 dB | **6.9 dB** ✓ |
+| **FL Studio** | Fuerte | Clap 909 | **0.30** | −10.5 dB | — |
+| | Medio | Tom | **0.18** | −14.9 dB | **4.4 dB** ✓ |
+| | Débil | Shaker | **0.10** | −20.0 dB | **5.1 dB** ✓ |
+| **Analógico** | Fuerte | Clave | **0.26** | −11.7 dB | — |
+| | Medio | Maraca | **0.14** | −17.1 dB | **5.4 dB** ✓ |
+| | Débil | Cabasa | **0.08** | −21.9 dB | **4.8 dB** ✓ |
+
+> Nota: los dB del master gain son la referencia de amplitud. La sonoridad percibida depende además del ancho de banda del instrumento (el noise BPF/HPF concentra energía en rangos agudos más audibles). La diferenciación principal entre niveles es la **identidad instrumental**, con el contraste dB como refuerzo.
 
 #### Control de volumen global (slider 0–100)
 
@@ -130,7 +153,7 @@ vol_final = vol_base × (volumen_global / 100)
 
 Esto preserva las relaciones dB entre niveles (fuerte:medio:débil = 1:0.4:0.19 aprox.) independientemente del ajuste global.
 
-**Principio de diseño**: los 3 niveles de acento se diferencian cualitativamente (square → triangle → sine) para que el oído los distinga instantáneamente incluso a alta velocidad. La duración constante evita que los beats débiles se sientan "recortados". El slider global permite al usuario ajustar el volumen maestro sin alterar el contraste entre niveles.
+**Principio de diseño**: los 3 niveles de acento se diferencian cualitativamente por **identidad instrumental** (caja vs hi-hat, clave vs maraca) para que el oído los distinga instantáneamente incluso a alta velocidad. La duración propia de cada instrumento (envelope de percusión real) evita que los beats débiles se sientan "recortados". El slider global permite al usuario ajustar el volumen maestro sin alterar el contraste entre niveles.
 
 #### Mapa de conversión rápida: gain ↔ dB
 

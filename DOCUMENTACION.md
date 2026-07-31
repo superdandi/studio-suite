@@ -60,15 +60,17 @@ Hook `useMetronome` basado en cadena de `setTimeout` (permite timing irregular p
 
 La implementación calcula la posición de corchea dentro del compás como `eighthPos = floor(count * 2 / subdivisions)` y aplica `EIGHTHS_PER_BAR[compás]` como módulo para determinar el nivel de acento (2=fuerte, 1=medio, 0=débil).
 
-**Sonidos** — cada tipo de sonido tiene 3 variantes internas que se corresponden con los 3 niveles de acento del patrón del compás:
+**Sonidos** — cada tipo de sonido tiene 3 variantes internas que se corresponden con los 3 niveles de acento del patrón del compás. La duración de cada beat es **constante** dentro de cada tipo de sonido (no varía por acento). La diferenciación audible entre niveles viene del **timbre** (forma de onda) y la frecuencia, no de recortar el sonido.
 
-| Nivel | Normal | 808 | FL Studio | Analógico |
-|---|---|---|---|---|
-| **2 fuerte** | Square 2000Hz vol 0.30, 30ms | Cowbell ~900Hz + noise, 40ms | Sine 2400Hz vol 0.28, 18ms | Sine 1000Hz vol 0.22, 80ms |
-| **1 medio** | Square 1500Hz vol 0.15, 30ms | Rimshot ~1800Hz + noise, 25ms | Sine 2000Hz vol 0.14, 18ms | Sine 800Hz vol 0.11, 80ms |
-| **0 débil** | Square 1000Hz vol 0.05, 20ms | Noise burst vol 0.08, 15ms | Sine 1800Hz vol 0.05, 12ms | Sine 600Hz vol 0.04, 60ms |
+| Nivel | Timbre | Normal (20ms) | 808 (35ms) | FL Studio (18ms) | Analógico (80ms) |
+|---|---|---|---|---|---|
+| **2 fuerte** | Square/Sine | Square 2000Hz vol 0.30 | Cowbell 900→800Hz + noise vol 0.35 | Sine 2400Hz vol 0.28 | Sine 1000Hz vol 0.22 |
+| **1 medio** | **Triangle** | Triangle 1200Hz vol 0.10 | Rimshot 1800Hz + noise vol 0.20 | Triangle 1000Hz vol 0.07 | Triangle 700Hz vol 0.07 |
+| **0 débil** | **Sine** | Sine 600Hz vol 0.03 | Ghost sine 200Hz vol 0.03 | Sine 500Hz vol 0.02 | Sine 300Hz vol 0.02 |
 
 Los acentos son independientes del tipo de sonido. El patrón de acentos viene del compás; el tipo de sonido solo define las frecuencias/volúmenes/timbres de cada nivel.
+
+**Principio de diseño**: los 3 niveles de acento se diferencian cualitativamente (square → triangle → sine) para que el oído los distinga instantáneamente incluso a alta velocidad. La duración constante evita que los beats débiles se sientan "recortados".
 
 **TAP** — calcula BPM promedio a partir de hasta 5 toques.
 

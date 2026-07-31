@@ -94,65 +94,70 @@ export function createClick(accent: AccentLevel, soundType: SoundType = "normal"
 
   switch (soundType) {
     case "normal": {
-      const map: Record<AccentLevel, { freq: number; vol: number; dur: number }> = {
-        2: { freq: 2000, vol: 0.30, dur: 0.030 },
-        1: { freq: 1500, vol: 0.15, dur: 0.030 },
-        0: { freq: 1000, vol: 0.05, dur: 0.020 },
+      const DUR = 0.020;
+      const map: Record<AccentLevel, { freq: number; vol: number; type: OscillatorType }> = {
+        2: { freq: 2000, vol: 0.30, type: "square" },
+        1: { freq: 1200, vol: 0.10, type: "triangle" },
+        0: { freq: 600, vol: 0.03, type: "sine" },
       };
-      const { freq, vol, dur } = map[accent];
-      oscillatorClick(ctx, now, freq, vol, dur);
+      const { freq, vol, type } = map[accent];
+      oscillatorClick(ctx, now, freq, vol, DUR, type);
       break;
     }
 
-    case "808":
+    case "808": {
+      const DUR = 0.035;
       if (accent === 2) {
-        oscillatorClick(ctx, now, 900, 0.35, 0.040, "square", 800);
+        oscillatorClick(ctx, now, 900, 0.35, DUR, "square", 800);
         noiseBurst(ctx, now, 0.015, 0.12);
       } else if (accent === 1) {
-        oscillatorClick(ctx, now, 1800, 0.20, 0.025, "sine");
+        oscillatorClick(ctx, now, 1800, 0.20, DUR, "sine");
         noiseBurst(ctx, now, 0.020, 0.25);
       } else {
-        noiseBurst(ctx, now, 0.015, 0.08);
+        oscillatorClick(ctx, now, 200, 0.03, DUR, "sine");
       }
       break;
+    }
 
     case "flstudio": {
-      const map: Record<AccentLevel, { freq: number; vol: number; dur: number }> = {
-        2: { freq: 2400, vol: 0.28, dur: 0.018 },
-        1: { freq: 2000, vol: 0.14, dur: 0.018 },
-        0: { freq: 1800, vol: 0.05, dur: 0.012 },
+      const DUR = 0.018;
+      const map: Record<AccentLevel, { freq: number; vol: number; type: OscillatorType }> = {
+        2: { freq: 2400, vol: 0.28, type: "sine" },
+        1: { freq: 1000, vol: 0.07, type: "triangle" },
+        0: { freq: 500, vol: 0.02, type: "sine" },
       };
-      const { freq, vol, dur } = map[accent];
+      const { freq, vol, type } = map[accent];
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
-      osc.type = "sine";
+      osc.type = type;
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0, now);
       g.gain.linearRampToValueAtTime(vol, now + 0.001);
-      g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      g.gain.exponentialRampToValueAtTime(0.001, now + DUR);
       osc.connect(g).connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + dur);
+      osc.stop(now + DUR);
       break;
     }
 
     case "analog": {
-      const map: Record<AccentLevel, { freq: number; vol: number; dur: number }> = {
-        2: { freq: 1000, vol: 0.22, dur: 0.080 },
-        1: { freq: 800, vol: 0.11, dur: 0.080 },
-        0: { freq: 600, vol: 0.04, dur: 0.060 },
+      const DUR = 0.080;
+      const map: Record<AccentLevel, { freq: number; vol: number; type: OscillatorType }> = {
+        2: { freq: 1000, vol: 0.22, type: "sine" },
+        1: { freq: 700, vol: 0.07, type: "triangle" },
+        0: { freq: 300, vol: 0.02, type: "sine" },
       };
-      const { freq, vol, dur } = map[accent];
+      const { freq, vol, type } = map[accent];
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
-      osc.type = "sine";
+      osc.type = type;
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0, now);
       g.gain.linearRampToValueAtTime(vol, now + 0.006);
-      g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      g.gain.exponentialRampToValueAtTime(0.001, now + DUR);
       osc.connect(g).connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + dur);
+      osc.stop(now + DUR);
       break;
     }
   }

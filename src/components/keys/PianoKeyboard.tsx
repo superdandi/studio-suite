@@ -83,7 +83,7 @@ export default function PianoKeyboard({
         const blackNoteIdx = (WHITE_KEYS[i] + 1) % 12;
         const midi = startOctave * 12 + blackNoteIdx + oct * 12;
         const isHighlighted = highlightedNotes.includes(midi);
-        const x = whiteKeyIndex * KEY_WIDTH - BLACK_KEY_WIDTH / 2;
+        const x = (whiteKeyIndex + 1) * KEY_WIDTH - BLACK_KEY_WIDTH / 2;
 
         ctx.fillStyle = isHighlighted
           ? "rgba(0, 255, 255, 0.8)"
@@ -128,7 +128,7 @@ export default function PianoKeyboard({
         }
         const blackNoteIdx = (WHITE_KEYS[i] + 1) % 12;
         const midi = startOctave * 12 + blackNoteIdx + oct * 12;
-        const x = whiteKeyIndex * KEY_WIDTH - BLACK_KEY_WIDTH / 2;
+        const x = (whiteKeyIndex + 1) * KEY_WIDTH - BLACK_KEY_WIDTH / 2;
 
         if (mx >= x && mx <= x + BLACK_KEY_WIDTH && my <= BLACK_KEY_HEIGHT) {
           onNoteClick(midi);

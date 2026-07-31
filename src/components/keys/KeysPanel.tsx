@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import ToolContainer from "@/components/ToolContainer";
 import PianoKeyboard from "./PianoKeyboard";
 import { useScalePlayer } from "@/hooks/useScalePlayer";
@@ -18,13 +18,41 @@ const SCALE_CATEGORIES: { label: string; types: ScaleType[] }[] = [
   { label: "Modos", types: ["dorian", "phrygian", "lydian", "mixolydian", "locrian"] },
   { label: "Pentatónicas", types: ["pentatonic-major", "pentatonic-minor"] },
   { label: "Otras", types: ["blues", "chromatic", "whole-tone", "octatonic"] },
+  {
+    label: "Japonesas",
+    types: ["hirajoshi", "iwato", "insen", "yo"],
+  },
+  {
+    label: "Árabes",
+    types: ["hijaz", "rast", "phrygian-dominant"],
+  },
+  {
+    label: "Indias",
+    types: ["bhairav", "bhairavi", "todi"],
+  },
+  {
+    label: "Africanas/Indonesia",
+    types: ["pelog", "slendro", "african-pentatonic"],
+  },
 ];
 
 export default function KeysPanel() {
   const [root, setRoot] = useState<NoteName>("C");
   const [scaleType, setScaleType] = useState<ScaleType>("major");
   const [highlightedNotes, setHighlightedNotes] = useState<number[]>([]);
+  const [ascPlaying, setAscPlaying] = useState(false);
+  const [ascDescPlaying, setAscDescPlaying] = useState(false);
   const scalePlayer = useScalePlayer();
+
+  const togglePlay = useCallback((mode: "asc" | "ascdesc") => {
+    if (mode === "asc") {
+      setAscPlaying((p) => !p);
+      setAscDescPlaying(false);
+    } else {
+      setAscDescPlaying((p) => !p);
+      setAscPlaying(false);
+    }
+  }, []);
 
   const updateScale = useCallback((r: NoteName, s: ScaleType) => {
     setRoot(r);
@@ -41,12 +69,18 @@ export default function KeysPanel() {
     setHighlightedNotes(midiNotes);
   }, []);
 
-  const playScale = useCallback(() => {
-    scalePlayer.playScale(root, scaleType);
-  }, [scalePlayer, root, scaleType]);
-
   const scale = SCALE_TYPES[scaleType];
   const scaleNotes = getScaleNotes(root, scaleType);
+
+  useEffect(() => {
+    if (ascPlaying) {
+      scalePlayer.playScale(root, scaleType, "asc");
+    } else if (ascDescPlaying) {
+      scalePlayer.playScale(root, scaleType, "ascdesc");
+    } else {
+      scalePlayer.stopScale();
+    }
+  }, [root, scaleType, ascPlaying, ascDescPlaying, scalePlayer]);
 
   return (
     <ToolContainer title="Keys" icon="🎹">
@@ -112,13 +146,36 @@ export default function KeysPanel() {
           />
         </div>
 
-        <div className="text-center">
-          <button
-            onClick={playScale}
-            className="px-8 py-3 rounded font-bold text-sm tracking-wider border border-[#00ffff]/50 text-[#00ffff] bg-[#00ffff]/10 hover:bg-[#00ffff]/20 transition-all"
-          >
-            ▶ REPRODUCIR ESCALA
-          </button>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex gap-4">
+            <button
+              onClick={() => togglePlay("asc")}
+              className={`px-6 py-3 rounded font-bold text-sm tracking-wider transition-all ${
+                ascPlaying
+                  ? "bg-red-900/50 text-red-400 border border-red-800 hover:bg-red-900/70"
+                  : "border border-[#00ffff]/50 text-[#00ffff] bg-[#00ffff]/10 hover:bg-[#00ffff]/20"
+              }`}
+            >
+              {ascPlaying ? "■ DETENER" : "▶ REPRODUCIR ESCALA"}
+            </button>
+            <button
+              onClick={() => togglePlay("ascdesc")}
+              className={`px-6 py-3 rounded font-bold text-sm tracking-wider transition-all ${
+                ascDescPlaying
+                  ? "bg-red-900/50 text-red-400 border border-red-800 hover:bg-red-900/70"
+                  : "border border-[#ffaa00]/50 text-[#ffaa00] bg-[#ffaa00]/10 hover:bg-[#ffaa00]/20"
+              }`}
+            >
+              {ascDescPlaying ? "■ DETENER" : "▶ ASC + DESC"}
+            </button>
+          </div>
+          <p className="text-xs text-[#555]">
+            {ascPlaying
+              ? "Reproduciendo escala ascendente en bucle…"
+              : ascDescPlaying
+                ? "Reproduciendo escala ascendente + descendente en bucle…"
+                : "Pulsá para reproducir en bucle hasta detener."}
+          </p>
         </div>
 
         <div className="card-cyber rounded p-4">

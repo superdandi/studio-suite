@@ -130,6 +130,71 @@ export const SCALE_TYPES = {
     intervals: [0, 2, 3, 5, 6, 8, 9, 11],
     description: "T-ST-T-ST-T-ST-T-ST",
   },
+  hirajoshi: {
+    name: "Hirajoshi",
+    intervals: [0, 2, 3, 7, 8],
+    description: "Japonesa: T-½-2T-½-3½",
+  },
+  iwato: {
+    name: "Iwato",
+    intervals: [0, 1, 5, 6, 10],
+    description: "Japonesa: ½-2T+½-½-2T+½",
+  },
+  insen: {
+    name: "In-sen",
+    intervals: [0, 1, 5, 7, 10],
+    description: "Japonesa (sakura): ½-2T+½-T-1½+½",
+  },
+  yo: {
+    name: "Yo",
+    intervals: [0, 2, 5, 7, 9],
+    description: "Japonesa pentatónica sin semitonos",
+  },
+  hijaz: {
+    name: "Hijaz (Doble Armónica)",
+    intervals: [0, 1, 4, 5, 7, 8, 11],
+    description: "Árabe: ½-1½-½-T-½-1½-½",
+  },
+  rast: {
+    name: "Rast",
+    intervals: [0, 2, 4, 5, 7, 9, 10],
+    description: "Árabe (maqam): T-T-½-T-T-T-½",
+  },
+  "phrygian-dominant": {
+    name: "Frigia Dominante",
+    intervals: [0, 1, 4, 5, 7, 8, 10],
+    description: "Árabe/flamenco: 1-♭2-3-4-5-♭6-♭7",
+  },
+  bhairav: {
+    name: "Bhairav",
+    intervals: [0, 1, 4, 5, 7, 8, 11],
+    description: "India (raga matinal): 1-♭2-3-4-5-♭6-7",
+  },
+  bhairavi: {
+    name: "Bhairavi",
+    intervals: [0, 1, 3, 5, 7, 8, 10],
+    description: "India: 1-♭2-♭3-4-5-♭6-♭7",
+  },
+  todi: {
+    name: "Todi",
+    intervals: [0, 1, 3, 6, 7, 8, 11],
+    description: "India: 1-♭2-♭3-♯4-5-♭6-7 (tritono)",
+  },
+  pelog: {
+    name: "Pelog (Balinese)",
+    intervals: [0, 1, 3, 7, 8],
+    description: "Gamelán javanés: ½-T-2T-½-3½",
+  },
+  slendro: {
+    name: "Slendro",
+    intervals: [0, 2, 4, 7, 9],
+    description: "Gamelán: 5 notas casi equiespaciadas",
+  },
+  "african-pentatonic": {
+    name: "Africana Pentatónica",
+    intervals: [0, 2, 4, 7, 9],
+    description: "Pentatónica mayor, base de muchas músicas africanas",
+  },
 } as const;
 
 export type ScaleType = keyof typeof SCALE_TYPES;

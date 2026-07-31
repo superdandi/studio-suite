@@ -1,5 +1,17 @@
 # Studio Suite — Documentación Técnica
 
+## Estado de revisión
+
+Lista checable de secciones revisadas y aprobadas, actualizada en cada iteración:
+
+- [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
+- [ ] **Afinador (Tune)**
+- [ ] **Analizador (Scan)**
+- [ ] **Escalas (Keys)** — en progreso (expansión de escalas étnicas + loop de reproducción)
+- [ ] **Entrenamiento auditivo (Ear)**
+- [ ] **Teoría (Theory)**
+- [ ] **Tema/UI global**
+
 ## Arquitectura
 
 SPA con Next.js 15 (App Router) y export estático. Las herramientas viven en tabs laterales dentro de `page.tsx`, cada una cargada con `next/dynamic` para code splitting.
@@ -193,6 +205,66 @@ Esto preserva las relaciones dB entre niveles (fuerte:medio:débil = 1:0.4:0.19 
 - **Tema**: Cyberpunk con colores #ff00ff, #00ffff, #00dd88 sobre fondo #0a0a0f
 - **Footer**: Enlaces a Theory (local), Oscilate y VIZCOSO (externos)
 - **Navegación**: Navbar con logo que vuelve al Dashboard + 5 tabs de herramientas
+
+### Escalas (Keys)
+
+#### Teoría — escalas existentes (occidentales)
+
+Cada escala se define por su **patrón de intervalos** en semitonos. `SCALE_TYPES` en `lib/music-theory.ts` almacena nombre, intervalos y descripción; `getScaleNotes(root, type)` calcula las notas a partir de la fundamental.
+
+| Categoría | Escala | Intervalos (semitones) | Grados |
+|---|---|---|---|
+| **Mayor** | Mayor (Jónica) | [0,2,4,5,7,9,11] | 1 2 3 4 5 6 7 |
+| **Menor** | Menor Natural (Eólica) | [0,2,3,5,7,8,10] | 1 2 ♭3 4 5 ♭6 ♭7 |
+| | Menor Armónica | [0,2,3,5,7,8,11] | 1 2 ♭3 4 5 ♭6 7 |
+| | Menor Melódica | [0,2,3,5,7,9,11] | 1 2 ♭3 4 5 6 7 |
+| **Modos** | Dórica | [0,2,3,5,7,9,10] | 1 2 ♭3 4 5 6 ♭7 |
+| | Frigia | [0,1,3,5,7,8,10] | 1 ♭2 ♭3 4 5 ♭6 ♭7 |
+| | Lidía | [0,2,4,6,7,9,11] | 1 2 3 ♯4 5 6 7 |
+| | Mixolidia | [0,2,4,5,7,9,10] | 1 2 3 4 5 6 ♭7 |
+| | Locria | [0,1,3,5,6,8,10] | 1 ♭2 ♭3 4 ♭5 ♭6 ♭7 |
+| **Pentatónicas** | Pentatónica Mayor | [0,2,4,7,9] | 1 2 3 5 6 |
+| | Pentatónica Menor | [0,3,5,7,10] | 1 ♭3 4 5 ♭7 |
+| **Otras** | Blues | [0,3,5,6,7,10] | 1 ♭3 4 ♭5 5 ♭7 |
+| | Cromática | [0,1,2,3,4,5,6,7,8,9,10,11] | los 12 semitonos |
+| | Tonos Enteros | [0,2,4,6,8,10] | 1 2 3 ♯4 ♯5 ♯6 |
+| | Octatónica (T-ST) | [0,2,3,5,6,8,9,11] | 1 2 ♭3 4 ♭5 ♭6 6 7 |
+
+#### Teoría — nuevas escalas étnicas/orientales/africanas/asiáticas
+
+Las escalas no occidentales se aproximan al sistema de 12 semitonos (temperamento igual) para poder sintetizarse en Web Audio. Muchas usan **cuartos de tono** en su interpretación tradicional; aquí se documentan las aproximaciones en semitonos que usa la app.
+
+| Categoría | Escala | Intervalos (semitones) | Notas en C | Carácter |
+|---|---|---|---|---|
+| **Japonesas** | Hirajoshi | [0,2,3,7,8] | C D E♭ G A♭ | Pentatónica, sonido koto |
+| | Iwato | [0,1,5,6,10] | C D♭ F G♭ B♭ | Modal, tensa, sin 3ª ni 6ª |
+| | In-sen | [0,1,5,7,10] | C D♭ F G B♭ | Sakura sakura, muy oriental |
+| | Yo | [0,2,5,7,9] | C D F G A | Pentatónica sin semitonos |
+| **Árabes/Medio Oriente** | Hijaz (doble armónica) | [0,1,4,5,7,8,11] | C D♭ E F G A♭ B | 2ª menor + 3ª mayor, exótica |
+| | Rast | [0,2,4,5,7,9,10] | C D E F G A B♭ | Base de muchos maqamat |
+| | Frigia dominante | [0,1,4,5,7,8,10] | C D♭ E F G A♭ B♭ | Sonido flamenco/árabe |
+| **Indias** | Bhairav | [0,1,4,5,7,8,11] | C D♭ E F G A♭ B | Raga matinal, doble armónica |
+| | Bhairavi | [0,1,3,5,7,8,10] | C D♭ E♭ F G A♭ B♭ | Frigia con 6ª menor |
+| | Todi | [0,1,3,6,7,8,11] | C D♭ E♭ F♯ G A♭ B | Tritono característico |
+| **Africanas/Indonesia** | Pelog (Balinese) | [0,1,3,7,8] | C D♭ E♭ G A♭ | 5 notas asimétricas, gamelán |
+| | Slendro | [0,2,4,7,9] | C D E G A | 5 notas casi equiespaciadas |
+| | Africana pentatónica | [0,2,4,7,9] | C D E G A | Equivalente a pentatónica mayor |
+
+**Notas teóricas importantes**:
+- **Hijaz, Bhairav y Rast** comparten la "doble armónica" (2ª menor + 3ª mayor) pero difieren en grados superiores.
+- **Pelog** y **Slendro** son escalas de gamelán javanés: Pelog es asimétrica (7 tonos con 5 usados), Slendro es casi equiespaciada (5 tonos ≈ 240 cents cada uno, aquí aproximada).
+- Las escalas japonesas **In-sen** e **Iwato** son pentatónicas con semitonos, a diferencia de la pentatónica mayor que no los tiene.
+- Las aproximaciones con intervalos iguales no reproducen los **microtonos** originales; es una simplificación para síntesis procedural.
+
+#### Plan e implementación
+
+**Proceso**: (1) documentar teoría → (2) agregar intervalos a `SCALE_TYPES` → (3) crear categorías en `SCALE_CATEGORIES` → (4) verificar render en panel Keys → (5) build + deploy.
+
+**Cambios planeados para Keys**:
+1. `lib/music-theory.ts`: agregar 12 escalas a `SCALE_TYPES` (hirajoshi, iwato, insen, yo, hijaz, rast, phrygian-dominant, bhairav, bhairavi, todi, pelog, slendro, african-pentatonic).
+2. `components/keys/KeysPanel.tsx`: nuevas categorías **Japonesas**, **Árabes**, **Indias**, **Africanas/Indonesia** + dos botones de reproducción: `▶ REPRODUCIR ESCALA` (ascendente) y `▶ ASC+DESC` (ascendente + descendente), ambos con toggle a `■ DETENER`.
+3. `hooks/useScalePlayer.ts`: refactor a loop con cadena de `setTimeout` — `playScale(root, type, mode)` con modos `asc` y `ascdesc`, y `stopScale()`.
+4. `components/keys/PianoKeyboard.tsx`: fix de teclas negras para que el teclado empiece en **Do** (C4 en x=0). La posición actual calcula `x = whiteKeyIndex * KEY_WIDTH - BLACK_KEY_WIDTH/2`, lo que dibuja la negra C# en **x=-12** (sobresale por la izquierda y parece que el teclado empieza a la mitad de C#). Corrección: `x = (whiteKeyIndex + 1) * KEY_WIDTH - BLACK_KEY_WIDTH / 2` en `draw` y `handleClick` → C# queda centrada en el límite C/D (x=28).
 
 ## Build
 

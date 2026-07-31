@@ -9,6 +9,8 @@ import {
   setRhodesBassDb,
   setRhodesTrebleDb,
   setRhodesDecay,
+  setRhodesSustain,
+  setRhodesRelease,
   setRhodesDrive,
   setRhodesBrightness,
   setRhodesChorusRate,
@@ -166,6 +168,8 @@ export default function RhodesControls() {
     setRhodesBassDb(settings.bass);
     setRhodesTrebleDb(settings.treble);
     setRhodesDecay(settings.decay);
+    setRhodesSustain(settings.sustain);
+    setRhodesRelease(settings.release);
     setRhodesDrive(settings.drive);
     setRhodesBrightness(settings.brightness);
     setRhodesChorusRate(settings.chorusRate);
@@ -235,12 +239,32 @@ export default function RhodesControls() {
           <Slider
             label="Decay"
             value={settings.decay}
-            min={0.2}
+            min={0.01}
             max={2}
-            step={0.1}
-            format={(v) => `${v.toFixed(1)}×`}
+            step={0.01}
+            format={(v) => `${v.toFixed(2)} s`}
             accent="#ffaa00"
             onChange={(v) => patch({ decay: v })}
+          />
+          <Slider
+            label="Sustain"
+            value={settings.sustain}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
+            accent="#00dd88"
+            onChange={(v) => patch({ sustain: v })}
+          />
+          <Knob
+            label="Release"
+            value={settings.release}
+            min={0.01}
+            max={2}
+            step={0.01}
+            format={(v) => `${Math.round(v * 1000)} ms`}
+            accent="#ffaa00"
+            onChange={(v) => patch({ release: v })}
           />
         </Section>
 

@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -502,7 +502,7 @@ El **tremolo** (LFO modulando la amplitud) es el sonido Rhodes por excelencia: l
 
 ```
 oscilador tine (fundamental + parcial ×2 "campana")
-  → envelope (attack + decay exponencial)
+  → envelope ADSR (attack → decay → sustain → release)
     → input del bus
       → Drive (WaveShaper tanh)
         → Brightness (lowpass)
@@ -524,7 +524,9 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 | **Tremolo Depth** | Knob | 0–100% | 0 (off) | Gain del LFO |
 | **Bass** | Slider | −12…+12 dB | 0 dB | BiquadFilter lowshelf |
 | **Treble** | Slider | −12…+12 dB | 0 dB | BiquadFilter highshelf |
-| **Decay** | Slider | 0.2–2.0× | 1.0× | Escala la duración del envelope |
+| **Decay** | Slider | 0.01–2.0 s | 0.15 s | Tiempo de caída al nivel de sustain (ADSR) |
+| **Sustain** | Slider | 0–100% | 60% | Nivel sostenido tras el decay (ADSR) |
+| **Release** | Knob | 10–2000 ms | 200 ms | Caída exponencial al final de la nota (ADSR) |
 | **Drive** | Knob | 0–100% | 0 (bypass) | WaveShaperNode (curva tanh) |
 | **Brightness** | Slider | 500–20000 Hz (log) | 20000 (abierto) | BiquadFilter lowpass |
 | **Chorus Rate** | Knob | 0–5 Hz | 0.8 Hz | LFO sine → delay.delayTime |
@@ -542,27 +544,33 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 | **Chorus** | delay base / modulación | base 22ms, LFO 0–5 Hz, profundidad 0–100% | Modula `delay.delayTime` ±~4ms; mezcla dry/wet controlada por Depth |
 | **Key Click** | burst de noise | HPF ~3kHz, envelope ~30ms, volumen `volume×keyClick` | "Tunk" mecánico del martillo sobre el tine |
 | **Attack** | tiempo de ramp | 1 ms (percussivo) → 200 ms (suave) | Ramp lineal de g1; g2 usa `attack×0.6` |
+| **Sustain** | nivel sostenido | 0% (staccato) → 100% (la nota no decae tras el ataque) | El tine cae a este nivel tras el decay y se mantiene hasta el final de la duración de la nota |
+| **Release** | tiempo de caída | 10 ms (seco, se corta) → 2000 ms (cola larga) | Ramp exponencial del nivel de sustain a 0 al terminar la duración de la nota |
 | **Reverb** | IR procedural | buffer mono ~2.5s, `noise × exp(−t/decay)` | Ambiente tipo spring/sala corta; mezcla dry/wet |
 
 **Diseño del bus** (singleton lazy):
 - `getRhodesBus()` inicializa la cadena una sola vez usando `getAudioContext()` de `lib/audio.ts` (mismo contexto compartido de la app). La cadena se crea bajo demanda; si el contexto está suspendido (sin gesto de usuario aún), se reanuda con el primer `playRhodesNote`.
 - **Grafo fijo sin rewirear** (evita clics): los efectos se neutralizan con sus propias ganancias/curvas en vez de reconectar nodos — drive=0 → curva identidad; chorusDepth=0 → wet gain 0; reverb=0 → wet gain 0; brightness=20000 → lowpass abierto. Los LFO de tremolo y chorus corren siempre (coste bajo).
 - El **LFO del tremolo** modula la amplitud del bus entre `1 − depth` y `1 + depth` — modulación de **amplitud** (tremolo), no de pitch. El **LFO del chorus** modula `delay.delayTime` del DelayNode.
-- Setters imperativos para cada control (`setRhodesVolume`, `setRhodesBassDb`, `setRhodesTrebleDb`, `setRhodesTremoloRate`, `setRhodesTremoloDepth`, `setRhodesDecay`, `setRhodesDrive`, `setRhodesBrightness`, `setRhodesChorusRate`, `setRhodesChorusDepth`, `setRhodesKeyClick`, `setRhodesAttack`, `setRhodesReverb`) + reset a defaults. Aplican cambios en caliente a los nodos existentes, sin recrear la cadena (evita clics y glitches).
-- `playRhodesNote(freq, duration, volume)` sintetiza el **tine** — ataque configurable (Attack) y decay exponencial con un segundo oscilador a ×2 frecuencia con menor ganancia y decay más corto (la "campana" metálica). El **Decay** multiplica la duración efectiva del envelope. Si Key Click > 0, se dispara además un burst de noise HPF al ataque.
+- Setters imperativos para cada control (`setRhodesVolume`, `setRhodesBassDb`, `setRhodesTrebleDb`, `setRhodesTremoloRate`, `setRhodesTremoloDepth`, `setRhodesDecay`, `setRhodesSustain`, `setRhodesRelease`, `setRhodesDrive`, `setRhodesBrightness`, `setRhodesChorusRate`, `setRhodesChorusDepth`, `setRhodesKeyClick`, `setRhodesAttack`, `setRhodesReverb`) + reset a defaults. Aplican cambios en caliente a los nodos existentes, sin recrear la cadena (evita clics y glitches). Los setters de envelope (decay, sustain, release, attack, key click) solo almacenan el valor: aplican a las **notas siguientes** (el envelope se construye por nota).
+- `playRhodesNote(freq, duration, volume)` sintetiza el **tine** con envelope **ADSR**: el ataque (Attack) sube a `volume`, el decay (Decay, tiempo en segundos) cae exponencialmente al **nivel de sustain** (Sustain), la nota se **mantiene** a ese nivel durante su `duration` (el tiempo que dura la nota en teclado/escala/pieza) y al terminar hace el **release** (Release) exponencial a 0. El segundo oscilador a ×2 frecuencia (la "campana" metálica) conserva su carácter: ataca a `volume×0.35`, decae a 0 en `decay×0.6` y **no** tiene fase sustain — el metal se apaga naturalmente. Si Key Click > 0, se dispara además un burst de noise HPF al ataque.
 
 **UI** (`src/components/keys/RhodesControls.tsx`):
 - Panel en tarjeta `card-cyber` **debajo del piano**, encima de los botones de reproducción, con título tipo "RHODES · VOZ DEL INSTRUMENTO".
-- Organizado en **secciones sutiles**: **VOZ** (Attack, Key Click, Brightness, Decay) · **AMP** (Drive, Bass, Treble, Volume) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb).
-- **Knobs rotatorios** custom (drag vertical para ajustar, doble click para reset al default, `role="slider"` + atributos aria) para Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Drive, Key Click, Attack y Reverb — con indicador de ángulo proporcional al valor.
-- **Sliders** (`<input type="range">` con `accent-color`, reutilizando el estilo del PulsePanel) para Bass, Treble, Decay y Brightness.
+- Organizado en **secciones sutiles**: **VOZ** (Attack, Key Click, Brightness, Decay, Sustain, Release) · **AMP** (Drive, Bass, Treble, Volume) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb).
+- **Knobs rotatorios** custom (drag vertical para ajustar, doble click para reset al default, `role="slider"` + atributos aria) para Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Drive, Key Click, Attack, Release y Reverb — con indicador de ángulo proporcional al valor.
+- **Sliders** (`<input type="range">` con `accent-color`, reutilizando el estilo del PulsePanel) para Bass, Treble, Decay, Sustain y Brightness.
 - Botón **RESET** que restaura todos los defaults (todo neutro).
 - Estado local (`useState`) + `useEffect` que aplica los setters del bus al montar y en cada cambio; al desmontar no se restaura nada (los controles persisten en el bus).
 
 **Integración** (`src/hooks/useScalePlayer.ts`):
 - `playNoteFn` deja de conectar a `ctx.destination` y delega en `playRhodesNote` (que enruta al bus Rhodes). Como **todo** el audio de Keys pasa por `playNoteFn` (teclado físico vía `playNote`, escalas vía `playScale`, piezas vía `playPiece`), el panel Rhodes moldea **todas las vías** a la vez — una sola voz de instrumento coherente.
 
-**Verificación**: simulación Node del bus — valores de controls dentro de rango, matemática de tremolo (`1±depth`), decay (multiplicador de duración), curva de drive (identidad en 0, saturación creciente), cutoff logarítmico de brightness, IR de reverb con decaimiento exponencial, y que todos los setters existen; build estático; revisión manual girando knobs mientras se reproduce una escala y una pieza.
+**Verificación**: simulación Node del bus — valores de controls dentro de rango, matemática de tremolo (`1±depth`), decay (tiempo en segundos), curva de drive (identidad en 0, saturación creciente), cutoff logarítmico de brightness, IR de reverb con decaimiento exponencial, y que todos los setters existen; build estático; revisión manual girando knobs mientras se reproduce una escala y una pieza.
+
+#### Mejoras futuras (ideas documentadas)
+
+- **Note-off real en el teclado físico (Opción B del ADSR)** — hoy el ADSR está **programado**: sustain = nivel que se mantiene durante la duración fija de cada nota (teclado: 0.5s; escalas: 0.25s; piezas: su duración rítmica) y release = rampa al final. Una mejora futura es el comportamiento de tecladista real: mapear cada tecla (canvas `pointerdown/up` y teclado `keydown/up`) a una **voz activa** (oscilador + envelope), mantener sustain **mientras se sostiene la tecla** y disparar release al soltarla. Implica rastreo de voces activas (mapa `midi → {osc, gain, stop}`), **robo de notas** (límite de polifonía, ej. 8–16 voces), re-trigger si se repite la misma tecla, y mantener el ADSR programado como fallback para escalas/piezas (que no tienen nota sostenida). Es un cambio estructural del disparo, no del bus — el grafo y el panel no se tocan.
 
 #### Registro de bugs
 

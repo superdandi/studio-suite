@@ -9,6 +9,8 @@ export interface RhodesSettings {
   bass: number;
   treble: number;
   decay: number;
+  sustain: number;
+  release: number;
   drive: number;
   brightness: number;
   chorusRate: number;
@@ -24,7 +26,9 @@ export const RHODES_DEFAULTS: RhodesSettings = {
   tremoloDepth: 0,
   bass: 0,
   treble: 0,
-  decay: 1,
+  decay: 0.15,
+  sustain: 0.6,
+  release: 0.2,
   drive: 0,
   brightness: 20000,
   chorusRate: 0.8,
@@ -206,8 +210,10 @@ export function playRhodesNote(freq: number, duration: number, volume = 0.3): vo
   const ctx = getAudioContext();
   const b = getRhodesBus();
   const now = ctx.currentTime;
-  const effectiveDur = Math.max(0.05, duration * current.decay);
-  const attack = Math.min(effectiveDur * 0.5, Math.max(0.001, current.attack));
+  const decayT = Math.max(0.01, current.decay);
+  const sustainLvl = Math.min(1, Math.max(0, current.sustain));
+  const releaseT = Math.max(0.01, current.release);
+  const attack = Math.max(0.001, current.attack);
 
   const fundamental = ctx.createOscillator();
   const bell = ctx.createOscillator();
@@ -219,20 +225,30 @@ export function playRhodesNote(freq: number, duration: number, volume = 0.3): vo
   bell.type = "sine";
   bell.frequency.value = freq * 2;
 
-  g1.gain.setValueAtTime(0, now);
-  g1.gain.linearRampToValueAtTime(volume, now + attack);
-  g1.gain.exponentialRampToValueAtTime(0.001, now + effectiveDur);
+  const attackEnd = now + attack;
+  const decayEnd = attackEnd + decayT;
+  const releaseStart = decayEnd + Math.max(0, duration);
+  const end = releaseStart + releaseT + 0.05;
+  const sustainPeak = Math.max(0.0001, volume * sustainLvl);
 
+  g1.gain.setValueAtTime(0, now);
+  g1.gain.linearRampToValueAtTime(volume, attackEnd);
+  g1.gain.exponentialRampToValueAtTime(sustainPeak, decayEnd);
+  g1.gain.setValueAtTime(sustainPeak, releaseStart);
+  g1.gain.exponentialRampToValueAtTime(0.001, end);
+
+  const bellAttackEnd = now + attack * 0.6;
+  const bellEnd = bellAttackEnd + decayT * 0.6 + 0.02;
   g2.gain.setValueAtTime(0, now);
-  g2.gain.linearRampToValueAtTime(volume * 0.35, now + attack * 0.6);
-  g2.gain.exponentialRampToValueAtTime(0.001, now + effectiveDur * 0.6);
+  g2.gain.linearRampToValueAtTime(volume * 0.35, bellAttackEnd);
+  g2.gain.exponentialRampToValueAtTime(0.001, bellEnd);
 
   fundamental.connect(g1).connect(b.input);
   bell.connect(g2).connect(b.input);
   fundamental.start(now);
   bell.start(now);
-  fundamental.stop(now + effectiveDur);
-  bell.stop(now + effectiveDur * 0.6);
+  fundamental.stop(end);
+  bell.stop(bellEnd);
 
   if (current.keyClick > 0) {
     const src = ctx.createBufferSource();
@@ -275,8 +291,16 @@ export function setRhodesTrebleDb(db: number): void {
   if (bus) bus.treble.gain.setTargetAtTime(db, getAudioContext().currentTime, 0.01);
 }
 
-export function setRhodesDecay(mult: number): void {
-  current.decay = mult;
+export function setRhodesDecay(sec: number): void {
+  current.decay = sec;
+}
+
+export function setRhodesSustain(level: number): void {
+  current.sustain = level;
+}
+
+export function setRhodesRelease(sec: number): void {
+  current.release = sec;
 }
 
 export function setRhodesDrive(d: number): void {

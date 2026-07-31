@@ -10,7 +10,6 @@ import {
   getScaleNotes,
   getScaleMidi,
   getScaleMidiSequence,
-  KEYBOARD_KEY_SEQUENCE,
   KEYBOARD_KEY_TO_MIDI,
   type NoteName,
   type ScaleType,
@@ -49,6 +48,7 @@ export default function KeysPanel() {
   const [ascDescPlaying, setAscDescPlaying] = useState(false);
   const [activeNotes, setActiveNotes] = useState<number[]>([]);
   const [showLabels, setShowLabels] = useState(true);
+  const [playableKeyboard, setPlayableKeyboard] = useState(true);
   const scalePlayer = useScalePlayer();
 
   const playMidi = useCallback(
@@ -62,6 +62,7 @@ export default function KeysPanel() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (!playableKeyboard) return;
       if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       const midi = KEYBOARD_KEY_TO_MIDI[e.key.toLowerCase()];
       if (midi === undefined) return;
@@ -70,6 +71,7 @@ export default function KeysPanel() {
       playMidi(midi);
     };
     const onKeyUp = (e: KeyboardEvent) => {
+      if (!playableKeyboard) return;
       const midi = KEYBOARD_KEY_TO_MIDI[e.key.toLowerCase()];
       if (midi === undefined) return;
       setActiveNotes((prev) => prev.filter((m) => m !== midi));
@@ -79,9 +81,8 @@ export default function KeysPanel() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
-      setActiveNotes([]);
     };
-  }, [playMidi]);
+  }, [playMidi, playableKeyboard]);
 
   const togglePlay = useCallback((mode: "asc" | "ascdesc") => {
     if (mode === "asc") {
@@ -92,6 +93,19 @@ export default function KeysPanel() {
       setAscPlaying(false);
     }
   }, []);
+
+  const togglePlayableKeyboard = useCallback(() => {
+    setPlayableKeyboard((p) => {
+      const next = !p;
+      if (!next) {
+        scalePlayer.stopScale();
+        setAscPlaying(false);
+        setAscDescPlaying(false);
+        setActiveNotes([]);
+      }
+      return next;
+    });
+  }, [scalePlayer]);
 
   const updateScale = useCallback((r: NoteName, s: ScaleType) => {
     setRoot(r);
@@ -181,29 +195,31 @@ export default function KeysPanel() {
             showLabels={showLabels}
             onNoteClick={playMidi}
           />
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex flex-wrap gap-1">
-              {[KEYBOARD_KEY_SEQUENCE.slice(0, 12), KEYBOARD_KEY_SEQUENCE.slice(12)].map((row, r) => (
-                <div key={r} className="flex gap-1">
-                  {row.map((k) => (
-                    <span key={k} className="px-1.5 py-0.5 rounded border border-[#2a2a4a] text-[#8888aa] text-[10px] font-mono">
-                      {k}
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
+          <div className="flex items-center justify-between mt-3 gap-2">
             <button
-              onClick={() => setShowLabels((s) => !s)}
+              onClick={togglePlayableKeyboard}
               className={`px-3 py-1 rounded border text-[10px] font-mono transition-all ${
-                showLabels
-                  ? "border-[#ffdd44]/60 text-[#ffdd44] bg-[#ffdd44]/10"
-                  : "border-[#2a2a4a] text-[#8888aa] hover:border-[#ffdd44]/50"
+                playableKeyboard
+                  ? "border-[#00ffff]/60 text-[#00ffff] bg-[#00ffff]/10"
+                  : "border-[#ffaa00]/60 text-[#ffaa00] bg-[#ffaa00]/10"
               }`}
-              title="Mostrar u ocultar las etiquetas de teclas sobre el piano"
+              title="Alternar entre tocar con el teclado físico (TECLADO) y solo visualizar la escala (PIANOLA)"
             >
-              TECLAS: {showLabels ? "ON" : "OFF"}
+              MODO: {playableKeyboard ? "TECLADO" : "PIANOLA"}
             </button>
+            {playableKeyboard && (
+              <button
+                onClick={() => setShowLabels((s) => !s)}
+                className={`px-3 py-1 rounded border text-[10px] font-mono transition-all ${
+                  showLabels
+                    ? "border-[#ffdd44]/60 text-[#ffdd44] bg-[#ffdd44]/10"
+                    : "border-[#2a2a4a] text-[#8888aa] hover:border-[#ffdd44]/50"
+                }`}
+                title="Mostrar u ocultar las etiquetas de teclas sobre el piano"
+              >
+                TECLAS: {showLabels ? "ON" : "OFF"}
+              </button>
+            )}
           </div>
         </div>
 

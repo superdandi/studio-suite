@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import { getAudioContext } from "@/lib/audio";
 import {
   midiToFrequency,
@@ -60,5 +60,5 @@ export function useScalePlayer() {
     playNoteFn(freq, 0.5, "sine", 0.3);
   }, []);
 
-  return { playScale, stopScale, playNote };
+  return useMemo(() => ({ playScale, stopScale, playNote }), [playScale, stopScale, playNote]);
 }

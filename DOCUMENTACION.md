@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -399,12 +399,47 @@ export const MIDI_TO_KEYBOARD_KEY: Record<number, string> = {};
 - `components/keys/PianoKeyboard.tsx`: nuevas props `activeNotes` y `showLabels`.
   - Notas activas → overlay ámbar `#ffdd44` con glow, visualmente distinto del cyan/rosa de la escala.
   - `showLabels` → dibuja la tecla física correspondiente (`MIDI_TO_KEYBOARD_KEY[midi]`) en la base de cada tecla del canvas.
-- Toggle **`TECLAS: ON/OFF`** bajo el piano controla `showLabels` (default ON) + leyenda de dos filas con las teclas mapeadas, generada desde `KEYBOARD_KEY_SEQUENCE`.
+- Toggle **`TECLAS: ON/OFF`** controla `showLabels` (default ON). Se renderiza **solo en modo TECLADO**: las etiquetas de tecla sobre el canvas son la única representación de bindings (se eliminó la leyenda de chips bajo el piano por redundante).
 
 **Notas**:
 - Requiere **teclado español** (`ñ` directa; `,` `.` `-` en la fila QWERTY). En layout US no existe `ñ`.
 - `e.key` se normaliza a minúscula; con Shift la fila de números produce símbolos (`2`→`@`) que no están mapeados → no colisionan.
 - `preventDefault` solo sobre las teclas mapeadas; el resto del teclado conserva su comportamiento.
+
+#### Bug resuelto: ruido al reproducir escala (identidad inestable → bucle de renders)
+
+**Síntoma**: al pulsar `▶ REPRODUCIR ESCALA` o `▶ ASC + DESC`, en lugar de la escala sonaba un **zumbido/ruido** repetido, idéntico para cualquier escala o fundamental elegida.
+
+**Causa raíz**: `useScalePlayer()` retornaba un **objeto literal nuevo en cada render** (`{ playScale, stopScale, playNote }` sin `useMemo`). Al cambiar de identidad en cada render:
+
+1. `playMidi = useCallback(..., [scalePlayer])` → identidad nueva en cada render.
+2. El efecto de teclado (de este mismo panel, agregado en `9da6bdf`) tiene deps `[playMidi]` → se re-ejecuta en cada render, y su cleanup hacía `setActiveNotes([])` — `setState` con `[]` nuevo (referencia distinta) → **disparaba otro render**.
+3. El efecto de playback tiene deps `[root, scaleType, ascPlaying, ascDescPlaying, scalePlayer]` → también se re-ejecutaba en cada render → con `ascPlaying=true` llamaba `playScale()` → `stopScale()` + reproducía la nota 0 + reprogramaba el bucle.
+
+Resultado: **bucle de renders infinito** donde `playScale()` reiniciaba el patrón desde la primera nota en cada iteración → ráfagas rápidas del primer tono = zumbido. Es la misma clase de bug que el reinicio del metrónomo (commit `bb61c3e`): un objeto retornado por un hook con identidad inestable en las deps de un efecto.
+
+**Por qué no ocurría antes de `9da6bdf`**: nada causaba re-renders durante la reproducción (los `setTimeout` del loop no cambian estado), así que el efecto de playback corría una sola vez.
+
+**Corrección aplicada**:
+1. `useScalePlayer.ts`: el hook retorna `useMemo(() => ({ playScale, stopScale, playNote }), [playScale, stopScale, playNote])` → `scalePlayer` estable → `playMidi` estable → los efectos corren una sola vez y el de playback solo ante cambios reales.
+2. `KeysPanel.tsx`: se eliminó `setActiveNotes([])` del cleanup del efecto de teclado (con identidades estables el cleanup solo corre al desmontar).
+
+#### Switch de modos TECLADO / PIANOLA
+
+**Objetivo**: separar dos comportamientos que conviven en Keys para que no se estorben, y conservar ambas features (teclado tocable y visualización de la escala).
+
+| Modo | Teclas físicas | Glow ámbar (nota activa) | Highlights cyan/magenta | Click del mouse en canvas |
+|---|---|---|---|---|
+| **TECLADO** (default) | Suenan notas | Sí | Siempre visibles | Suena |
+| **PIANOLA** | No disparan sonido | No | Siempre visibles | Suena |
+
+**Comportamiento**:
+- El botón tipo switch bajo el piano alterna entre `MODO: TECLADO` y `MODO: PIANOLA` (default TECLADO).
+- En PIANOLA, los handlers de teclado retornan temprano (`if (!playableKeyboard) return`): no suenan ni tocan `activeNotes`.
+- Al **cambiar de modo se detiene la escala en reproducción** (`stopScale()` + `setAscPlaying(false)` + `setAscDescPlaying(false)`) y se vacía `activeNotes`.
+- El toggle `TECLAS: ON/OFF` solo se muestra en modo TECLADO: en PIANOLA no tiene sentido mostrar los bindings. La leyenda de chips bajo el piano se eliminó (redundante con las etiquetas del canvas).
+
+**Highlights de escala/tónica**: nunca se perdieron; cyan = notas de la escala, magenta = tónica, visibles en ambos modos (estaban en `PianoKeyboard.tsx` desde la implementación original de escalas). El bucle de renders del bug anterior hacía parecer el panel inestable, pero el dibujado siempre estuvo activo.
 
 ## Build
 

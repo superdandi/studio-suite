@@ -29,6 +29,7 @@ export default function PulsePanel() {
   const [figure, setFigure] = useState<RhythmFigure>("quarter");
   const [timeSignature, setTimeSignature] = useState<TimeSignature>("4/4");
   const [soundType, setSoundType] = useState<SoundType>("normal");
+  const [volume, setVolume] = useState(75);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
@@ -44,9 +45,9 @@ export default function PulsePanel() {
       return;
     }
     setCurrentBeat(0);
-    metronome.start(bpm, figure, beatCallback, soundType, timeSignature);
+    metronome.start(bpm, figure, beatCallback, soundType, timeSignature, volume / 100);
     return () => metronome.stop();
-  }, [bpm, figure, isPlaying, soundType, timeSignature, metronome, beatCallback]);
+  }, [bpm, figure, isPlaying, soundType, timeSignature, volume, metronome, beatCallback]);
 
   const handleStartStop = useCallback(() => {
     setIsPlaying((prev) => !prev);
@@ -108,6 +109,18 @@ export default function PulsePanel() {
             />
             <span>300</span>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm text-[#8888aa]">Volumen: {volume}%</label>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="w-full accent-[#00dd88]"
+          />
         </div>
 
         <div className="space-y-2">

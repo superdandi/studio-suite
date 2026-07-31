@@ -57,6 +57,7 @@ export function useMetronome() {
     callback: (beat: number, subdivision: number, totalSub: number) => void,
     soundType: SoundType = "normal",
     timeSignature: TimeSignature = "4/4",
+    volume: number = 0.75,
   ) => {
     const divisions = FIGURE_DIVISIONS[figure];
     const eighthsPerBar = EIGHTHS_PER_BAR[timeSignature];
@@ -73,7 +74,7 @@ export function useMetronome() {
       const barEighth = eighthPos % eighthsPerBar;
       const isBeatStart = count % divisions === 0;
       const accentLevel: AccentLevel = isBeatStart ? pattern[barEighth] : 0;
-      createClick(accentLevel, soundType);
+      createClick(accentLevel, soundType, volume);
 
       const quarterBeat = Math.floor(count / divisions) % DISPLAY_BEATS[timeSignature];
       const sub = count % divisions;
@@ -94,7 +95,7 @@ export function useMetronome() {
       timerRef.current = window.setTimeout(scheduleNext, delay);
     }
 
-    createClick(2, soundType);
+    createClick(2, soundType, volume);
     callback(0, 0, divisions);
     count = 1;
 

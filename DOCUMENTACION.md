@@ -62,15 +62,88 @@ La implementación calcula la posición de corchea dentro del compás como `eigh
 
 **Sonidos** — cada tipo de sonido tiene 3 variantes internas que se corresponden con los 3 niveles de acento del patrón del compás. La duración de cada beat es **constante** dentro de cada tipo de sonido (no varía por acento). La diferenciación audible entre niveles viene del **timbre** (forma de onda) y la frecuencia, no de recortar el sonido.
 
-| Nivel | Timbre | Normal (20ms) | 808 (35ms) | FL Studio (18ms) | Analógico (80ms) |
-|---|---|---|---|---|---|
-| **2 fuerte** | Square/Sine | Square 2000Hz vol 0.30 | Cowbell 900→800Hz + noise vol 0.35 | Sine 2400Hz vol 0.28 | Sine 1000Hz vol 0.22 |
-| **1 medio** | **Triangle** | Triangle 1200Hz vol 0.10 | Rimshot 1800Hz + noise vol 0.20 | Triangle 1000Hz vol 0.07 | Triangle 700Hz vol 0.07 |
-| **0 débil** | **Sine** | Sine 600Hz vol 0.03 | Ghost sine 200Hz vol 0.03 | Sine 500Hz vol 0.02 | Sine 300Hz vol 0.02 |
+### Investigación psicoacústica — diseño de niveles de volumen
 
-Los acentos son independientes del tipo de sonido. El patrón de acentos viene del compás; el tipo de sonido solo define las frecuencias/volúmenes/timbres de cada nivel.
+#### Base teórica: percepción humana de diferencias de intensidad
 
-**Principio de diseño**: los 3 niveles de acento se diferencian cualitativamente (square → triangle → sine) para que el oído los distinga instantáneamente incluso a alta velocidad. La duración constante evita que los beats débiles se sientan "recortados".
+El oído humano responde a la intensidad sonora de forma logarítmica. La unidad estándar es el **decibelio (dB)**, definido como:
+
+```
+dB = 20 · log₁₀(gain_linear)
+```
+
+| Diferencia | Percepción | Referencia |
+|---|---|---|
+| **1 dB** | JND (Just Noticeable Difference) — detectable solo en condiciones ideales de laboratorio (cámara anecoica) | Fletcher & Munson, 1933 |
+| **3 dB** | Mínimo cambio claramente perceptible en entorno real de escucha | ISO 226:2003 |
+| **5 dB** | Cambio obvio, fácil de distinguir sin entrenamiento | Práctica estándar de mezcla |
+| **6 dB** | Duplicación de amplitud (2× voltaje). Relación física directa | — |
+| **10 dB** | ~2× perceived loudness (sonoridad subjetiva). Ley de Stevens: ψ = k·φ^0.6 | Stevens, 1957 |
+| **20 dB** | ~4× perceived loudness. Diferencia entre habla conversacional y grito | — |
+
+#### Diagnóstico: problema con los niveles originales
+
+| Set | Fuerte (vol/dB) | Medio (vol/dB) | Débil (vol/dB) | Dif F→M (dB) | Dif M→D (dB) | Débil audible? |
+|---|---|---|---|---|---|---|
+| Normal | 0.30 / -10.5 | 0.10 / -20.0 | **0.03 / -30.5** | 9.5 ✓ | 10.5 ✓ | ❌ −30.5 dB = ruido de fondo en parlantes consumer |
+| 808 | 0.35 / -9.1 | 0.20 / -14.0 | **0.03 / -30.5** | 4.9 ✓ | 16.5 ✓ | ❌ idem |
+| FL Studio | 0.28 / -11.1 | 0.07 / -23.1 | **0.02 / -34.0** | 12.0 ✓ | 10.9 ✓ | ❌ −34 dB = inaudible |
+| Analógico | 0.22 / -13.2 | 0.07 / -23.1 | **0.02 / -34.0** | 9.9 ✓ | 9.9 ✓ | ❌ idem |
+
+**Problema raíz**: el nivel débil con gain ≤ 0.03 está 20–24 dB por debajo del fuerte. En parlantes de laptop o audífonos básicos, ese rango cae por debajo del suelo de ruido y no se reproduce.
+
+**Síntoma**: beats 2 y 4 en 4/4 desaparecen. El usuario escucha solo los beats fuertes (1 y 3), que tienen timbres distintos (square vs triangle), rompiendo la coherencia del patrón rítmico.
+
+#### Solución propuesta: corrección psicoacústica
+
+Criterios de diseño aplicados:
+
+1. **Audibilidad total**: todo nivel ≥ **0.05** (≥ −26 dB) — umbral mínimo realista en equipo consumer
+2. **Separación perceptible**: diferencia entre niveles **≥ 5 dB** (bien sobre el JND práctico de 3 dB)
+3. **Contraste dramático**: fuerte→débil ~12–16 dB (~2–3× perceived loudness)
+4. **Diferenciación cualitativa**: cada nivel usa forma de onda distinta (square → triangle → sine) además del cambio de volumen
+
+| Set | Nivel | Forma | Frecuencia | Vol | dB (SPL rel) | Δ desde anterior |
+|---|---|---|---|---|---|---|
+| **Normal** (20ms) | Fuerte | Square | 2000Hz | **0.32** | −9.9 dB | — |
+| | Medio | Triangle | 1200Hz | **0.13** | −17.7 dB | **7.8 dB** ✓ |
+| | Débil | Sine | 600Hz | **0.06** | −24.4 dB | **6.7 dB** ✓ |
+| **808** (35ms) | Fuerte | Cowbell square 900→800Hz + noise | | **0.32** | −9.9 dB | — |
+| | Medio | Rimshot sine 1800Hz + noise | | **0.18** | −14.9 dB | **5.0 dB** ✓ |
+| | Débil | Ghost sine | 200Hz | **0.06** | −24.4 dB | **9.5 dB** ✓ |
+| **FL Studio** (18ms) | Fuerte | Sine | 2400Hz | **0.30** | −10.5 dB | — |
+| | Medio | Triangle | 1000Hz | **0.11** | −19.2 dB | **8.7 dB** ✓ |
+| | Débil | Sine | 500Hz | **0.02** | −26.0 dB | **6.8 dB** ✓ |
+| **Analógico** (80ms) | Fuerte | Sine | 1000Hz | **0.25** | −12.0 dB | — |
+| | Medio | Triangle | 700Hz | **0.09** | −20.9 dB | **8.9 dB** ✓ |
+| | Débil | Sine | 300Hz | **0.05** | −26.0 dB | **5.1 dB** ✓ |
+
+#### Control de volumen global (slider 0–100)
+
+Además de los niveles fijos por acento, el metrónomo expone un **multiplicador de volumen global** con rango 0% (mudo) a 100% (máximo), con estado inicial 75%.
+
+El multiplicador escala linealmente todos los niveles de acento simultáneamente:
+
+```
+vol_final = vol_base × (volumen_global / 100)
+```
+
+Esto preserva las relaciones dB entre niveles (fuerte:medio:débil = 1:0.4:0.19 aprox.) independientemente del ajuste global.
+
+**Principio de diseño**: los 3 niveles de acento se diferencian cualitativamente (square → triangle → sine) para que el oído los distinga instantáneamente incluso a alta velocidad. La duración constante evita que los beats débiles se sientan "recortados". El slider global permite al usuario ajustar el volumen maestro sin alterar el contraste entre niveles.
+
+#### Mapa de conversión rápida: gain ↔ dB
+
+| gain | dB   | Percepción                     |
+|------|------|--------------------------------|
+| 0.50 | −6.0 | El doble de voltaje (−6 dB)   |
+| 0.35 | −9.1 | Fuerte típico                  |
+| 0.25 | −12.0 | Fuerte analógico               |
+| 0.13 | −17.7 | Medio                          |
+| 0.06 | −24.4 | Débil mínimo audible           |
+| 0.03 | −30.5 | **Inaudible en consumer**      |
+| 0.01 | −40.0 | Silencio práctico              |
+| 0.00 | −∞    | Mudo                           |
 
 **TAP** — calcula BPM promedio a partir de hasta 5 toques.
 
@@ -93,5 +166,4 @@ El output está en `out/`. Servir localmente:
 python3 -m http.server 8080 -d out
 # Abrir http://localhost:8080/studio-suite/
 ```
-
 

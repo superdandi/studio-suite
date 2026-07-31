@@ -88,7 +88,11 @@ function oscillatorClick(
 export type AccentLevel = 0 | 1 | 2;
 export type SoundType = "normal" | "808" | "flstudio" | "analog";
 
-export function createClick(accent: AccentLevel, soundType: SoundType = "normal"): void {
+export function createClick(
+  accent: AccentLevel,
+  soundType: SoundType = "normal",
+  volumeMultiplier: number = 1,
+): void {
   const ctx = getAudioContext();
   const now = ctx.currentTime;
 
@@ -96,25 +100,25 @@ export function createClick(accent: AccentLevel, soundType: SoundType = "normal"
     case "normal": {
       const DUR = 0.020;
       const map: Record<AccentLevel, { freq: number; vol: number; type: OscillatorType }> = {
-        2: { freq: 2000, vol: 0.30, type: "square" },
-        1: { freq: 1200, vol: 0.10, type: "triangle" },
-        0: { freq: 600, vol: 0.03, type: "sine" },
+        2: { freq: 2000, vol: 0.32, type: "square" },
+        1: { freq: 1200, vol: 0.13, type: "triangle" },
+        0: { freq: 600, vol: 0.06, type: "sine" },
       };
       const { freq, vol, type } = map[accent];
-      oscillatorClick(ctx, now, freq, vol, DUR, type);
+      oscillatorClick(ctx, now, freq, vol * volumeMultiplier, DUR, type);
       break;
     }
 
     case "808": {
       const DUR = 0.035;
       if (accent === 2) {
-        oscillatorClick(ctx, now, 900, 0.35, DUR, "square", 800);
-        noiseBurst(ctx, now, 0.015, 0.12);
+        oscillatorClick(ctx, now, 900, 0.32 * volumeMultiplier, DUR, "square", 800);
+        noiseBurst(ctx, now, 0.015, 0.12 * volumeMultiplier);
       } else if (accent === 1) {
-        oscillatorClick(ctx, now, 1800, 0.20, DUR, "sine");
-        noiseBurst(ctx, now, 0.020, 0.25);
+        oscillatorClick(ctx, now, 1800, 0.18 * volumeMultiplier, DUR, "sine");
+        noiseBurst(ctx, now, 0.020, 0.25 * volumeMultiplier);
       } else {
-        oscillatorClick(ctx, now, 200, 0.03, DUR, "sine");
+        oscillatorClick(ctx, now, 200, 0.06 * volumeMultiplier, DUR, "sine");
       }
       break;
     }
@@ -122,9 +126,9 @@ export function createClick(accent: AccentLevel, soundType: SoundType = "normal"
     case "flstudio": {
       const DUR = 0.018;
       const map: Record<AccentLevel, { freq: number; vol: number; type: OscillatorType }> = {
-        2: { freq: 2400, vol: 0.28, type: "sine" },
-        1: { freq: 1000, vol: 0.07, type: "triangle" },
-        0: { freq: 500, vol: 0.02, type: "sine" },
+        2: { freq: 2400, vol: 0.30, type: "sine" },
+        1: { freq: 1000, vol: 0.11, type: "triangle" },
+        0: { freq: 500, vol: 0.05, type: "sine" },
       };
       const { freq, vol, type } = map[accent];
       const osc = ctx.createOscillator();
@@ -132,7 +136,7 @@ export function createClick(accent: AccentLevel, soundType: SoundType = "normal"
       osc.type = type;
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0, now);
-      g.gain.linearRampToValueAtTime(vol, now + 0.001);
+      g.gain.linearRampToValueAtTime(vol * volumeMultiplier, now + 0.001);
       g.gain.exponentialRampToValueAtTime(0.001, now + DUR);
       osc.connect(g).connect(ctx.destination);
       osc.start(now);
@@ -143,9 +147,9 @@ export function createClick(accent: AccentLevel, soundType: SoundType = "normal"
     case "analog": {
       const DUR = 0.080;
       const map: Record<AccentLevel, { freq: number; vol: number; type: OscillatorType }> = {
-        2: { freq: 1000, vol: 0.22, type: "sine" },
-        1: { freq: 700, vol: 0.07, type: "triangle" },
-        0: { freq: 300, vol: 0.02, type: "sine" },
+        2: { freq: 1000, vol: 0.25, type: "sine" },
+        1: { freq: 700, vol: 0.09, type: "triangle" },
+        0: { freq: 300, vol: 0.05, type: "sine" },
       };
       const { freq, vol, type } = map[accent];
       const osc = ctx.createOscillator();
@@ -153,7 +157,7 @@ export function createClick(accent: AccentLevel, soundType: SoundType = "normal"
       osc.type = type;
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0, now);
-      g.gain.linearRampToValueAtTime(vol, now + 0.006);
+      g.gain.linearRampToValueAtTime(vol * volumeMultiplier, now + 0.006);
       g.gain.exponentialRampToValueAtTime(0.001, now + DUR);
       osc.connect(g).connect(ctx.destination);
       osc.start(now);

@@ -9,7 +9,15 @@ import {
   setRhodesBassDb,
   setRhodesTrebleDb,
   setRhodesDecay,
+  setRhodesDrive,
+  setRhodesBrightness,
+  setRhodesChorusRate,
+  setRhodesChorusDepth,
+  setRhodesKeyClick,
+  setRhodesAttack,
+  setRhodesReverb,
   resetRhodes,
+  brightnessCutoff,
   type RhodesSettings,
 } from "@/lib/rhodes";
 
@@ -127,12 +135,23 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#ff00ff]"
+        className="w-full"
         style={{ accentColor: accent }}
       />
       <span className="text-[11px] font-mono" style={{ color: accent }}>
         {format ? format(value) : Math.round(value)}
       </span>
+    </div>
+  );
+}
+
+function Section({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: accent }}>
+        {title}
+      </p>
+      <div className="flex flex-wrap items-start gap-4">{children}</div>
     </div>
   );
 }
@@ -147,6 +166,13 @@ export default function RhodesControls() {
     setRhodesBassDb(settings.bass);
     setRhodesTrebleDb(settings.treble);
     setRhodesDecay(settings.decay);
+    setRhodesDrive(settings.drive);
+    setRhodesBrightness(settings.brightness);
+    setRhodesChorusRate(settings.chorusRate);
+    setRhodesChorusDepth(settings.chorusDepth);
+    setRhodesKeyClick(settings.keyClick);
+    setRhodesAttack(settings.attack);
+    setRhodesReverb(settings.reverb);
   }, [settings]);
 
   const handleReset = useCallback(() => {
@@ -171,8 +197,64 @@ export default function RhodesControls() {
         </button>
       </div>
 
-      <div className="flex flex-wrap items-start gap-5">
-        <div className="flex gap-5">
+      <div className="flex flex-wrap gap-x-8 gap-y-5">
+        <Section title="Voz" accent="#ffdd44">
+          <Knob
+            label="Attack"
+            value={settings.attack}
+            min={0.001}
+            max={0.2}
+            step={0.001}
+            format={(v) => `${Math.round(v * 1000)} ms`}
+            accent="#ffdd44"
+            onChange={(v) => patch({ attack: v })}
+          />
+          <Knob
+            label="Key Click"
+            value={settings.keyClick}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
+            accent="#ffaa00"
+            onChange={(v) => patch({ keyClick: v })}
+          />
+          <Slider
+            label="Brightness"
+            value={brightnessCutoff((settings.brightness - 500) / 19500)}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => {
+              const hz = brightnessCutoff(v);
+              return hz >= 1000 ? `${Math.round(hz / 1000)}k Hz` : `${Math.round(hz)} Hz`;
+            }}
+            accent="#00dd88"
+            onChange={(v) => patch({ brightness: brightnessCutoff(v) })}
+          />
+          <Slider
+            label="Decay"
+            value={settings.decay}
+            min={0.2}
+            max={2}
+            step={0.1}
+            format={(v) => `${v.toFixed(1)}×`}
+            accent="#ffaa00"
+            onChange={(v) => patch({ decay: v })}
+          />
+        </Section>
+
+        <Section title="Amp" accent="#ff00ff">
+          <Knob
+            label="Drive"
+            value={settings.drive}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
+            accent="#ff00ff"
+            onChange={(v) => patch({ drive: v })}
+          />
           <Knob
             label="Volume"
             value={settings.volume}
@@ -183,6 +265,29 @@ export default function RhodesControls() {
             accent="#ff00ff"
             onChange={(v) => patch({ volume: v })}
           />
+          <Slider
+            label="Bass"
+            value={settings.bass}
+            min={-12}
+            max={12}
+            step={1}
+            format={(v) => `${v > 0 ? "+" : ""}${v} dB`}
+            accent="#ff00ff"
+            onChange={(v) => patch({ bass: v })}
+          />
+          <Slider
+            label="Treble"
+            value={settings.treble}
+            min={-12}
+            max={12}
+            step={1}
+            format={(v) => `${v > 0 ? "+" : ""}${v} dB`}
+            accent="#00dd88"
+            onChange={(v) => patch({ treble: v })}
+          />
+        </Section>
+
+        <Section title="FX" accent="#00ffff">
           <Knob
             label="Trem. Rate"
             value={settings.tremoloRate}
@@ -200,43 +305,40 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#00dd88"
+            accent="#00ffff"
             onChange={(v) => patch({ tremoloDepth: v })}
           />
-        </div>
-
-        <div className="flex gap-5 items-center ml-2">
-          <Slider
-            label="Bass"
-            value={settings.bass}
-            min={-12}
-            max={12}
-            step={1}
-            format={(v) => `${v > 0 ? "+" : ""}${v} dB`}
-            accent="#ffdd44"
-            onChange={(v) => patch({ bass: v })}
-          />
-          <Slider
-            label="Treble"
-            value={settings.treble}
-            min={-12}
-            max={12}
-            step={1}
-            format={(v) => `${v > 0 ? "+" : ""}${v} dB`}
-            accent="#00dd88"
-            onChange={(v) => patch({ treble: v })}
-          />
-          <Slider
-            label="Decay"
-            value={settings.decay}
-            min={0.2}
-            max={2}
+          <Knob
+            label="Chorus Rate"
+            value={settings.chorusRate}
+            min={0}
+            max={5}
             step={0.1}
-            format={(v) => `${v.toFixed(1)}×`}
-            accent="#ffaa00"
-            onChange={(v) => patch({ decay: v })}
+            format={(v) => `${v.toFixed(1)} Hz`}
+            accent="#00dd88"
+            onChange={(v) => patch({ chorusRate: v })}
           />
-        </div>
+          <Knob
+            label="Chorus Depth"
+            value={settings.chorusDepth}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
+            accent="#00dd88"
+            onChange={(v) => patch({ chorusDepth: v })}
+          />
+          <Knob
+            label="Reverb"
+            value={settings.reverb}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
+            accent="#00dd88"
+            onChange={(v) => patch({ reverb: v })}
+          />
+        </Section>
       </div>
     </div>
   );

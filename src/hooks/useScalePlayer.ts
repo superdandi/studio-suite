@@ -7,7 +7,7 @@ import {
   NOTE_NAMES,
   type NoteName,
   type ScaleType,
-  getScaleMidi,
+  getScaleMidiSequence,
 } from "@/lib/music-theory";
 
 export type ScalePlayMode = "asc" | "ascdesc";
@@ -39,20 +39,17 @@ export function useScalePlayer() {
 
   const playScale = useCallback((root: NoteName, scaleType: ScaleType, mode: ScalePlayMode = "asc") => {
     stopScale();
-    const freqs = getScaleMidi(root, scaleType, 4).map(midiToFrequency);
-
-    const sequence: number[] =
-      mode === "asc" ? freqs : [...freqs, ...freqs.slice(1, -1).reverse()];
+    const freqs = getScaleMidiSequence(root, scaleType, mode).map(midiToFrequency);
 
     let i = 0;
 
     function scheduleNext() {
-      playNoteFn(sequence[i], 0.25, "sine", 0.3);
-      i = (i + 1) % sequence.length;
+      playNoteFn(freqs[i], 0.25, "sine", 0.3);
+      i = (i + 1) % freqs.length;
       timerRef.current = window.setTimeout(scheduleNext, 300);
     }
 
-    playNoteFn(sequence[0], 0.25, "sine", 0.3);
+    playNoteFn(freqs[0], 0.25, "sine", 0.3);
     i = 1;
     timerRef.current = window.setTimeout(scheduleNext, 300);
   }, [stopScale]);

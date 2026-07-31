@@ -210,6 +210,15 @@ export function getScaleMidi(root: NoteName, scaleType: ScaleType, octave = 4): 
   return SCALE_TYPES[scaleType].intervals.map(i => rootMidi + i);
 }
 
+export function getScaleMidiSequence(
+  root: NoteName,
+  scaleType: ScaleType,
+  mode: "asc" | "ascdesc" = "asc",
+): number[] {
+  const asc = getScaleMidi(root, scaleType, 4);
+  return mode === "asc" ? asc : [...asc, ...asc.slice(1, -1).reverse()];
+}
+
 export function getScaleDegrees(_root: NoteName, scaleType: ScaleType): string[] {
   const scale = SCALE_TYPES[scaleType];
   const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];

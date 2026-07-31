@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (expansión de escalas étnicas + loop de reproducción)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -338,6 +338,33 @@ export function getScaleMidi(root: NoteName, scaleType: ScaleType, octave = 4): 
 - `PianoKeyboard.tsx`: base de octava corregida de `startOctave * 12` a `(startOctave + 1) * 12` en `draw` y `handleClick`, para que `startOctave={4}` arranque realmente en C4 (MIDI 60) y el rango resaltado (hasta 82 para B mayor, F#5) quepa en el canvas C4–B5.
 
 **Verificación**: para cada fundamental C…B, el primer MIDI de la escala coincide con `noteToMidi(root, 4)` y la secuencia es estrictamente ascendente, en las 27 escalas.
+
+#### Export MIDI del patrón (botones ⬇ MIDI ASC / ⬇ MIDI ASC+DESC)
+
+**Objetivo**: permitir descargar el patrón actual (root + escala + modo) como archivo MIDI estándar para importarlo en cualquier DAW (GarageBand, Cubase, FL Studio, Ableton, etc.).
+
+**Factibilidad**: alta y 100% client-side — compatible con el export estático de GitHub Pages (sin servidor). Los datos del patrón ya existen en `getScaleMidiSequence(root, scaleType, mode)`, que devuelve la secuencia MIDI exacta que reproduce el player (asc: `getScaleMidi(root, type, 4)`; ascdesc: `[...asc, ...asc.slice(1, -1).reverse()]` con el fix de raíz no duplicada). Solo falta codificarla al formato binario SMF.
+
+**Plan de implementación**:
+1. `lib/midi.ts` (nuevo): encoder SMF sin dependencias — `encodeVarint` (delta times en 7-bit), `buildScaleMidi(sequence, opts)` y `triggerDownload(filename, bytes)` vía `Blob` + `<a download>`.
+2. `lib/music-theory.ts`: helper `getScaleMidiSequence(root, scaleType, mode)` compartido entre player y export.
+3. `hooks/useScalePlayer.ts`: refactor para usar `getScaleMidiSequence` (elimina la duplicación de la construcción de secuencia).
+4. `components/keys/KeysPanel.tsx`: dos botones verdes `⬇ MIDI ASC` y `⬇ MIDI ASC+DESC`, uno por modo, que descargan el patrón actual. Nombres: `<escala>-<raiz>-<modo>.mid` (ej. `slendro-F-ascdesc.mid`).
+
+**Estructura del archivo SMF generado** (spec Standard MIDI File):
+
+| Bloque | Contenido |
+|---|---|
+| **MThd** | Formato 0, 1 track, división **480 ticks/negra** (PPQ) |
+| **MTrk** (track único) | Meta evento tempo `FF 51 03` = 300000 µs/negra → **200 BPM**; program change `C0` → piano acústico (programa 0); eventos note-on `0x90` (vel 90) / note-off `0x80` (vel 64); end-of-track `FF 2F 00` |
+
+**Timing**: cada nota se espacia **300ms** (equivalente a 200 BPM, negra por nota) y se mantiene 250ms antes del note-off, replicando exactamente el playback actual del player (la línea base del metrónomo es 120 BPM). El archivo exporta **un ciclo** del patrón en el modo elegido.
+
+**Roadmap futuro** (en orden):
+1. **Selector de BPM** — que el usuario elija el tempo al exportar.
+2. **Usar el BPM del metrónomo** — exportar al tempo configurado en Pulse si está activo.
+
+**Verificación**: parseo del MIDI generado — primer nota = `noteToMidi(root, 4)`, cantidad de eventos = `2 × notas` (on+off) + tempo + program + end, y división/tempo correctos. Build + deploy + revisión manual importando `slendro-F-ascdesc.mid` en un DAW.
 
 ## Build
 

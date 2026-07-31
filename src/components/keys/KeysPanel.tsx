@@ -9,9 +9,11 @@ import {
   SCALE_TYPES,
   getScaleNotes,
   getScaleMidi,
+  getScaleMidiSequence,
   type NoteName,
   type ScaleType,
 } from "@/lib/music-theory";
+import { buildScaleMidi, triggerDownload } from "@/lib/midi";
 
 const SCALE_CATEGORIES: { label: string; types: ScaleType[] }[] = [
   { label: "Mayor", types: ["major"] },
@@ -60,6 +62,15 @@ export default function KeysPanel() {
     setScaleType(s);
     setHighlightedNotes(getScaleMidi(r, s, 4));
   }, []);
+
+  const downloadMidi = useCallback(
+    (mode: "asc" | "ascdesc") => {
+      const sequence = getScaleMidiSequence(root, scaleType, mode);
+      const data = buildScaleMidi({ sequence });
+      triggerDownload(`${scaleType}-${root}-${mode}.mid`, data);
+    },
+    [root, scaleType],
+  );
 
   const scale = SCALE_TYPES[scaleType];
   const scaleNotes = getScaleNotes(root, scaleType);
@@ -159,6 +170,22 @@ export default function KeysPanel() {
               }`}
             >
               {ascDescPlaying ? "■ DETENER" : "▶ ASC + DESC"}
+            </button>
+          </div>
+          <div className="flex gap-4">
+            <button
+              onClick={() => downloadMidi("asc")}
+              className="px-4 py-1.5 rounded border border-[#00ff66]/50 text-[#00ff66] text-xs tracking-wider hover:bg-[#00ff66]/10 transition-all"
+              title="Descargar patrón ascendente como archivo MIDI (200 BPM)"
+            >
+              ⬇ MIDI ASC
+            </button>
+            <button
+              onClick={() => downloadMidi("ascdesc")}
+              className="px-4 py-1.5 rounded border border-[#00ff66]/50 text-[#00ff66] text-xs tracking-wider hover:bg-[#00ff66]/10 transition-all"
+              title="Descargar patrón ascendente + descendente como archivo MIDI (200 BPM)"
+            >
+              ⬇ MIDI ASC+DESC
             </button>
           </div>
           <p className="text-xs text-[#555]">

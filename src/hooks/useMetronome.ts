@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import { createClick } from "@/lib/audio";
 import type { AccentLevel, SoundType } from "@/lib/audio";
 
@@ -110,5 +110,5 @@ export function useMetronome() {
     }
   }, []);
 
-  return { start, stop };
+  return useMemo(() => ({ start, stop }), [start, stop]);
 }

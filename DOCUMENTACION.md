@@ -31,6 +31,23 @@ src/
 
 Hook `useMetronome` basado en cadena de `setTimeout` (permite timing irregular para swing).
 
+#### Bug resuelto: reinicio del metrónomo en cada render
+
+**Síntoma**: con la percusión cualitativa se escuchaba el **beat 1 (fuerte) repetido constantemente**; los beats débiles/medios nunca completaban el ciclo.
+
+**Causa raíz**: el efecto en `PulsePanel` que inicia/para el metrónomo tenía `metronome` (objeto retornado por el hook) en sus dependencias. `useMetronome()` retornaba `{ start, stop }` como **objeto literal nuevo en cada render** (aunque `start`/`stop` internamente fueran estables con `useCallback([])`). El callback del metrónomo hace `setCurrentBeat` → re-render → el objeto cambió de identidad → el effect re-ejecutaba → `stop()` + `start()` → y `start()` reproduce inmediatamente el fuerte. Loop infinito: solo sonaba el beat 1.
+
+```
+start() → creaClick(2) fuerte → timer → tick débil → setCurrentBeat → re-render
+        → metronome (identidad nueva) → cleanup stop() → start() → fuerte otra vez → …
+```
+
+**Diagnóstico diferencial**: la matriz de acentos (`ACCENT_PATTERNS`) se lee correctamente (verificado por simulación de las 7 figuras × 7 compases); el fuerte cae donde corresponde. El problema no era de lectura de patrones sino de ciclo de vida del efecto.
+
+**Corrección aplicada**:
+1. `PulsePanel.tsx`: se destructuran las referencias estables `const { start: startMetronome, stop: stopMetronome } = useMetronome()` y las deps del effect pasan a ser `[bpm, figure, isPlaying, soundType, timeSignature, volume, startMetronome, stopMetronome, beatCallback]` — todas estables salvo los valores, así el effect solo corre ante un cambio real.
+2. `useMetronome.ts`: el hook retorna `useMemo(() => ({ start, stop }), [start, stop])`, garantizando identidad estable del objeto por si otro consumidor lo usa.
+
 **Figuras rítmicas** — cada figura define cuántas subdivisiones por pulso:
 | Figura     | Divisiones |
 |------------|-----------|

@@ -33,7 +33,7 @@ export default function PulsePanel() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
-  const metronome = useMetronome();
+  const { start: startMetronome, stop: stopMetronome } = useMetronome();
 
   const beatCallback = useCallback((beat: number) => {
     setCurrentBeat(beat);
@@ -45,9 +45,9 @@ export default function PulsePanel() {
       return;
     }
     setCurrentBeat(0);
-    metronome.start(bpm, figure, beatCallback, soundType, timeSignature, volume / 100);
-    return () => metronome.stop();
-  }, [bpm, figure, isPlaying, soundType, timeSignature, volume, metronome, beatCallback]);
+    startMetronome(bpm, figure, beatCallback, soundType, timeSignature, volume / 100);
+    return () => stopMetronome();
+  }, [bpm, figure, isPlaying, soundType, timeSignature, volume, startMetronome, stopMetronome, beatCallback]);
 
   const handleStartStop = useCallback(() => {
     setIsPlaying((prev) => !prev);

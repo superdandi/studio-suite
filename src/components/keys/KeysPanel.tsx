@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import ToolContainer from "@/components/ToolContainer";
 import PianoKeyboard from "./PianoKeyboard";
+import RhodesControls from "./RhodesControls";
 import { useScalePlayer } from "@/hooks/useScalePlayer";
 import {
   NOTE_NAMES,
@@ -270,6 +271,8 @@ export default function KeysPanel() {
             )}
           </div>
         </div>
+
+        <RhodesControls />
 
         <div className="flex flex-col items-center gap-2">
           <div className="flex gap-4">

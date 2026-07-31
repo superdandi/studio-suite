@@ -2,7 +2,13 @@
 
 import { useRef, useCallback } from "react";
 import { getAudioContext } from "@/lib/audio";
-import { NOTE_NAMES, type NoteName, type ScaleType, getScaleNotes } from "@/lib/music-theory";
+import {
+  midiToFrequency,
+  NOTE_NAMES,
+  type NoteName,
+  type ScaleType,
+  getScaleMidi,
+} from "@/lib/music-theory";
 
 export type ScalePlayMode = "asc" | "ascdesc";
 
@@ -33,16 +39,7 @@ export function useScalePlayer() {
 
   const playScale = useCallback((root: NoteName, scaleType: ScaleType, mode: ScalePlayMode = "asc") => {
     stopScale();
-    const notes = getScaleNotes(root, scaleType);
-    const rootIdx = NOTE_NAMES.indexOf(root);
-
-    const freqs = notes.map((noteName) => {
-      const noteIdx = NOTE_NAMES.indexOf(noteName);
-      let midi = 60 + noteIdx - rootIdx;
-      while (midi < 48) midi += 12;
-      while (midi > 84) midi -= 12;
-      return 440 * Math.pow(2, (midi - 69) / 12);
-    });
+    const freqs = getScaleMidi(root, scaleType, 4).map(midiToFrequency);
 
     const sequence: number[] =
       mode === "asc" ? freqs : [...freqs, ...freqs.slice(1, -1).reverse()];

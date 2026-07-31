@@ -8,6 +8,7 @@ import {
   NOTE_NAMES,
   SCALE_TYPES,
   getScaleNotes,
+  getScaleMidi,
   type NoteName,
   type ScaleType,
 } from "@/lib/music-theory";
@@ -57,16 +58,7 @@ export default function KeysPanel() {
   const updateScale = useCallback((r: NoteName, s: ScaleType) => {
     setRoot(r);
     setScaleType(s);
-    const notes = getScaleNotes(r, s);
-    const rootIdx = NOTE_NAMES.indexOf(r);
-    const midiNotes = notes.map(n => {
-      const idx = NOTE_NAMES.indexOf(n);
-      let midi = 60 + idx - rootIdx;
-      if (midi < 48) midi += 12;
-      if (midi < 48) midi += 12;
-      return midi;
-    });
-    setHighlightedNotes(midiNotes);
+    setHighlightedNotes(getScaleMidi(r, s, 4));
   }, []);
 
   const scale = SCALE_TYPES[scaleType];

@@ -205,6 +205,11 @@ export function getScaleNotes(root: NoteName, scaleType: ScaleType): NoteName[] 
   return scale.intervals.map(i => NOTE_NAMES[(rootIdx + i) % 12]);
 }
 
+export function getScaleMidi(root: NoteName, scaleType: ScaleType, octave = 4): number[] {
+  const rootMidi = noteToMidi(root, octave);
+  return SCALE_TYPES[scaleType].intervals.map(i => rootMidi + i);
+}
+
 export function getScaleDegrees(_root: NoteName, scaleType: ScaleType): string[] {
   const scale = SCALE_TYPES[scaleType];
   const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];

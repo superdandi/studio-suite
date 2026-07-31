@@ -45,7 +45,7 @@ export default function PianoKeyboard({
     for (let oct = 0; oct < octaves; oct++) {
       for (let i = 0; i < 7; i++) {
         const noteIdx = WHITE_KEYS[i];
-        const midi = startOctave * 12 + noteIdx + oct * 12;
+        const midi = (startOctave + 1) * 12 + noteIdx + oct * 12;
         const x = whiteKeyIndex * KEY_WIDTH;
         const isHighlighted = highlightedNotes.includes(midi);
         const isRoot = NOTE_NAMES[noteIdx] === rootNote;
@@ -81,7 +81,7 @@ export default function PianoKeyboard({
           continue;
         }
         const blackNoteIdx = (WHITE_KEYS[i] + 1) % 12;
-        const midi = startOctave * 12 + blackNoteIdx + oct * 12;
+        const midi = (startOctave + 1) * 12 + blackNoteIdx + oct * 12;
         const isHighlighted = highlightedNotes.includes(midi);
         const x = (whiteKeyIndex + 1) * KEY_WIDTH - BLACK_KEY_WIDTH / 2;
 
@@ -127,7 +127,7 @@ export default function PianoKeyboard({
           continue;
         }
         const blackNoteIdx = (WHITE_KEYS[i] + 1) % 12;
-        const midi = startOctave * 12 + blackNoteIdx + oct * 12;
+        const midi = (startOctave + 1) * 12 + blackNoteIdx + oct * 12;
         const x = (whiteKeyIndex + 1) * KEY_WIDTH - BLACK_KEY_WIDTH / 2;
 
         if (mx >= x && mx <= x + BLACK_KEY_WIDTH && my <= BLACK_KEY_HEIGHT) {
@@ -143,7 +143,7 @@ export default function PianoKeyboard({
     for (let oct = 0; oct < octaves; oct++) {
       for (let i = 0; i < 7; i++) {
         const noteIdx = WHITE_KEYS[i];
-        const midi = startOctave * 12 + noteIdx + oct * 12;
+        const midi = (startOctave + 1) * 12 + noteIdx + oct * 12;
         const x = whiteKeyIndex * KEY_WIDTH;
 
         if (mx >= x && mx <= x + KEY_WIDTH) {

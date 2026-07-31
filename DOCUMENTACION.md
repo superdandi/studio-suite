@@ -300,6 +300,45 @@ Resultado para C mayor: `[C, D, E, F, G, A, B,  A, G, F, E, D]` (12 notas). El d
 - 8 notas (octatónica): `[0..7] + [6..1]` = 14 notas
 - 12 notas (cromática): `[0..11] + [10..1]` = 22 notas
 
+#### Bug resuelto: toda escala reproducía comenzando en Do
+
+**Síntoma**: independientemente de la nota fundamental elegida, la escala siempre sonaba (y se resaltaba) comenzando en **Do**. Cambiar la fundamental no producía ninguna diferencia perceptible.
+
+**Causa raíz**: una fórmula incorrecta de conversión de nota → MIDI, duplicada en dos archivos:
+
+```js
+// useScalePlayer.ts:41 y KeysPanel.tsx:64
+let midi = 60 + noteIdx - rootIdx;
+```
+
+El literal `60` es el MIDI de **C4**. Para la nota raíz se cumple `noteIdx === rootIdx`, por lo que la raíz siempre cae en `60` = C4. Las demás notas se desplazaban alrededor de ese C4, pero la fundamental quedaba clavada en Do. El método es conceptualmente incorrecto: mezcla índice de clase de nota (0–11) con una constante MIDI fija en vez de sumar los **intervalos en semitonos** desde la fundamental real.
+
+| Fundamental | rootIdx | Cálculo raíz | MIDI resultante | Suena como |
+|---|---|---|---|---|
+| C | 0 | 60 + 0 − 0 | 60 | C4 ✓ (casualidad) |
+| D | 2 | 60 + 2 − 2 | 60 | C4 ✗ |
+| E | 4 | 60 + 4 − 4 | 60 | C4 ✗ |
+| G | 7 | 60 + 7 − 7 | 60 | C4 ✗ |
+
+Además, para fundamentales distintas de C la secuencia resultaba desordenada (ej. D mayor → `59, 60, 62, …`), ya que notas por debajo de la raíz en la clase de nota producían MIDI menores.
+
+**Base teórica**: la notación MIDI es `noteToMidi(note, octave) = índice(0–11) + (octave + 1) × 12`; C4 = 60, D4 = 62, etc. Una escala se construye tomando la **fundamental real** (`noteToMidi(root, 4)`) y sumándole sus **intervalos en semitonos** (`SCALE_TYPES[type].intervals`), que ya expresan la distancia desde la raíz. Esto garantiza que el grado 1 sea exactamente la fundamental elegida y que las notas sean estrictamente ascendentes dentro de la octava.
+
+**Corrección aplicada**: nuevo helper central en `lib/music-theory.ts`:
+
+```ts
+export function getScaleMidi(root: NoteName, scaleType: ScaleType, octave = 4): number[] {
+  const rootMidi = noteToMidi(root, octave);
+  return SCALE_TYPES[scaleType].intervals.map(i => rootMidi + i);
+}
+```
+
+- `useScalePlayer.ts`: `freqs` se calcula como `getScaleMidi(root, scaleType, 4).map(midiToFrequency)` (usa el `midiToFrequency` existente, sin duplicar la fórmula).
+- `KeysPanel.tsx`: `updateScale` usa `getScaleMidi(r, s, 4)` para `highlightedNotes`.
+- `PianoKeyboard.tsx`: base de octava corregida de `startOctave * 12` a `(startOctave + 1) * 12` en `draw` y `handleClick`, para que `startOctave={4}` arranque realmente en C4 (MIDI 60) y el rango resaltado (hasta 82 para B mayor, F#5) quepa en el canvas C4–B5.
+
+**Verificación**: para cada fundamental C…B, el primer MIDI de la escala coincide con `noteToMidi(root, 4)` y la secuencia es estrictamente ascendente, en las 27 escalas.
+
 ## Build
 
 ```bash

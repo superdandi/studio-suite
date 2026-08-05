@@ -8,6 +8,8 @@ import {
   type NoteName,
   type ScaleType,
   getScaleMidiSequence,
+  getProgressionMidiSequence,
+  type Progression,
 } from "@/lib/music-theory";
 import type { Piece } from "@/lib/pieces";
 
@@ -27,22 +29,29 @@ export function useScalePlayer() {
     }
   }, []);
 
-  const playScale = useCallback((root: NoteName, scaleType: ScaleType, mode: ScalePlayMode = "asc") => {
-    stopScale();
-    const freqs = getScaleMidiSequence(root, scaleType, mode).map(midiToFrequency);
+  const playScale = useCallback(
+    (root: NoteName, scaleType: ScaleType, mode: ScalePlayMode = "asc", progression: Progression | null = null) => {
+      stopScale();
+      const freqs = (
+        progression
+          ? getProgressionMidiSequence(root, scaleType, progression, mode)
+          : getScaleMidiSequence(root, scaleType, mode)
+      ).map(midiToFrequency);
 
-    let i = 0;
+      let i = 0;
 
-    function scheduleNext() {
-      playNoteFn(freqs[i], 0.25, 0.3);
-      i = (i + 1) % freqs.length;
+      function scheduleNext() {
+        playNoteFn(freqs[i], 0.25, 0.3);
+        i = (i + 1) % freqs.length;
+        timerRef.current = window.setTimeout(scheduleNext, 300);
+      }
+
+      playNoteFn(freqs[0], 0.25, 0.3);
+      i = 1;
       timerRef.current = window.setTimeout(scheduleNext, 300);
-    }
-
-    playNoteFn(freqs[0], 0.25, 0.3);
-    i = 1;
-    timerRef.current = window.setTimeout(scheduleNext, 300);
-  }, [stopScale]);
+    },
+    [stopScale],
+  );
 
   const playNote = useCallback((noteName: NoteName, octave: number) => {
     const midi = NOTE_NAMES.indexOf(noteName) + (octave + 1) * 12;

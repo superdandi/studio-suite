@@ -17,6 +17,7 @@ import {
 } from "@/lib/music-theory";
 import { buildScaleMidi, triggerDownload } from "@/lib/midi";
 import { PIANOLA_PIECES } from "@/lib/pieces";
+import { PROGRESSIONS } from "@/lib/progressions";
 
 const SCALE_CATEGORIES: { label: string; types: ScaleType[] }[] = [
   { label: "Mayor", types: ["major"] },
@@ -53,7 +54,10 @@ export default function KeysPanel() {
   const [playableKeyboard, setPlayableKeyboard] = useState(true);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const [piecePlaying, setPiecePlaying] = useState(false);
+  const [selectedProgId, setSelectedProgId] = useState<string>("none");
   const scalePlayer = useScalePlayer();
+
+  const selectedProg = selectedProgId === "none" ? null : PROGRESSIONS.find((p) => p.id === selectedProgId) ?? null;
 
   const playMidi = useCallback(
     (midi: number) => {
@@ -154,13 +158,13 @@ export default function KeysPanel() {
         setActiveNotes(midi === null ? [] : [midi]);
       });
     } else if (ascPlaying) {
-      scalePlayer.playScale(root, scaleType, "asc");
+      scalePlayer.playScale(root, scaleType, "asc", selectedProg);
     } else if (ascDescPlaying) {
-      scalePlayer.playScale(root, scaleType, "ascdesc");
+      scalePlayer.playScale(root, scaleType, "ascdesc", selectedProg);
     } else {
       scalePlayer.stopScale();
     }
-  }, [root, scaleType, ascPlaying, ascDescPlaying, piecePlaying, selectedPieceId, scalePlayer]);
+  }, [root, scaleType, ascPlaying, ascDescPlaying, piecePlaying, selectedPieceId, selectedProg, scalePlayer]);
 
   return (
     <ToolContainer title="Keys" icon="🎹">
@@ -232,6 +236,33 @@ export default function KeysPanel() {
               </div>
             )}
           </div>
+        </div>
+
+        <div>
+          <label className="text-sm text-[#8888aa] block mb-1">Progresión armónica</label>
+          <select
+            value={selectedProgId}
+            onChange={(e) => {
+              setSelectedProgId(e.target.value);
+              setAscPlaying(false);
+              setAscDescPlaying(false);
+              setPiecePlaying(false);
+            }}
+            className="w-full max-w-md rounded border border-[#00ffff]/40 bg-[#0a0a1a] text-[#00ffff] px-3 py-2 text-xs font-mono tracking-wider focus:outline-none focus:border-[#00ffff]"
+            title="Elegir una progresión para que la escala recorra sus acordes en bucle"
+          >
+            <option value="none">Sin progresión</option>
+            {PROGRESSIONS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} · {p.degrees.map((d) => d.symbol).join(" → ")}
+              </option>
+            ))}
+          </select>
+          {selectedProg && (
+            <p className="text-xs text-[#555] mt-1">
+              La escala recorrerá en bucle: {selectedProg.degrees.map((d) => d.symbol).join(" → ")}
+            </p>
+          )}
         </div>
 
         <div className="card-cyber rounded p-4 overflow-x-auto">
@@ -317,9 +348,13 @@ export default function KeysPanel() {
             {piecePlaying
               ? `Reproduciendo pieza en bucle…`
               : ascPlaying
-                ? "Reproduciendo escala ascendente en bucle…"
+                ? selectedProg
+                  ? `Reproduciendo ${selectedProg.name} (${selectedProg.degrees.map((d) => d.symbol).join(" → ")}) en bucle…`
+                  : "Reproduciendo escala ascendente en bucle…"
                 : ascDescPlaying
-                  ? "Reproduciendo escala ascendente + descendente en bucle…"
+                  ? selectedProg
+                    ? `Reproduciendo ${selectedProg.name} asc+desc en bucle…`
+                    : "Reproduciendo escala ascendente + descendente en bucle…"
                   : "Pulsá para reproducir en bucle hasta detener."}
           </p>
         </div>

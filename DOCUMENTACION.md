@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release + progresión armónica)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -483,6 +483,56 @@ type Piece = { id: string; name: string; genre: string; tempo: number; notes: Pi
 **No incluido** (alcance): descarga MIDI de piezas — `buildScaleMidi` es específico de patrones de escala. Posible iteración futura.
 
 **Verificación**: simulación en Node — todas las notas dentro de 60–83 y duración total por ciclo razonable; build estático; revisión manual reproduciendo las 3 piezas en modo PIANOLA.
+
+#### Progresión armónica (la escala recorre los acordes)
+
+**Objetivo**: además de elegir la nota fundamental y el tipo de escala, poder elegir una **progresión armónica** (ej. I–IV–V–I) para que, al reproducir la escala asc o asc+desc en bucle, esta **recorra los acordes de la progresión** — cada acorde actúa como nueva tónica durante sus compases y al terminar la secuencia vuelve al I. El resultado es la escala sonando "sobre" un movimiento armónico, como en una práctica de improvisación real.
+
+**Decisiones de diseño**:
+- La **nota fundamental sigue siendo la tónica de la canción**: los grados de la progresión se calculan desde la root seleccionada (en C: I=C, IV=F, V=G, vi=Am…). Cambiar la root transpone toda la progresión.
+- El selector de progresión está **debajo de las categorías de escala**, visible en ambos modos (TECLADO y PIANOLA).
+- Timing: mismo tempo fijo que las escalas (notas cada 300 ms, duración 0.25 s) — sin control BPM.
+- La progresión **armoniza sobre la escala elegida**: el tipo de escala (mayor, dórica, pentatónica…) se transpone a cada grado; los grados expresan **raíces** (movimiento armónico), no la calidad del acorde.
+
+**Modelo de datos** (`src/lib/music-theory.ts` + `src/lib/progressions.ts`):
+
+```ts
+type ProgressionDegree = { symbol: string; semitones: number; bars: number };
+// semitones: offset desde la tónica en la escala mayor (I=0, ii=2, IV=5, V=7, vi=9, bVII=10…)
+// bars: compases que suena este grado (el patrón de escala se repite bars veces)
+
+type Progression = { id: string; name: string; degrees: ProgressionDegree[] };
+```
+
+**Funciones nuevas**:
+- `getDegreeRoot(root, degreeSemitones, octave=4)` → MIDI de la raíz del grado (ej. `getDegreeRoot("C", 5)` = 65 = F4).
+- `getProgressionMidiSequence(root, scaleType, progression, mode)` → concatena para cada grado (repetido `bars` veces) la secuencia `getScaleMidiSequence` transpuesta a su raíz. Devuelve la secuencia MIDI completa que recorre la progresión una vez.
+
+**Progresiones predefinidas** (`src/lib/progressions.ts`):
+
+| ID | Nombre | Grados (compases) | Carácter |
+|---|---|---|---|
+| `none` | Sin progresión | — | Escala simple (default, sin cambios) |
+| `i-iv-v-i` | I–IV–V–I | I(1) IV(1) V(1) I(1) | Tonal clásico |
+| `i-v-vi-iv` | I–V–vi–IV | I(1) V(1) vi(1) IV(1) | Pop moderno |
+| `i-vi-iv-v` | I–vi–IV–V | I(1) vi(1) IV(1) V(1) | Doo-wop de los 50s |
+| `ii-v-i` | ii–V–I | ii(1) V(1) I(2) | Jazz estándar (I doble compás) |
+| `i-iv-v-v` | I–IV–V–V | I(1) IV(1) V(2) | Blues básico |
+| `blues-12` | Blues 12 compases | I(4) IV(2) I(2) V(1) IV(1) I(1) V(1) | Forma de blues de 12 compases |
+| `i-bvii-iv-i` | I–bVII–IV–I (Rock) | I(1) bVII(1) IV(1) I(1) | Rock / mixolidio |
+
+**Player** (`src/hooks/useScalePlayer.ts`): `playScale` acepta un parámetro opcional `progression: Progression | null` (default `null`). Si hay progresión, la secuencia de frecuencias se genera con `getProgressionMidiSequence`; si es `null`, comportamiento actual (`getScaleMidiSequence`). El bucle de notas (300 ms) recorre la secuencia completa y al final vuelve al inicio — así, cada ciclo repite la progresión.
+
+**Ejemplo**: I–IV–V–I en C mayor, escala mayor, asc → `[60,62,64,65,67,69,71]` (C) + `[65,67,69,70,72,74,76]` (F) + `[67,69,71,72,74,76,78]` (G) + `[60,62,64,65,67,69,71]` (C) = 28 notas ≈ 8.4 s por ciclo.
+
+**UI** (`src/components/keys/KeysPanel.tsx`):
+- Nuevo estado `selectedProgId` (default `"none"`) y derivado `selectedProg` (`null` si `none`).
+- `<select>` estilizado debajo de las categorías de escala: opción "Sin progresión" + una por progresión, con etiqueta que muestra los grados (ej. "I–V–vi–IV · I → V → vi → IV").
+- Al elegir una progresión se detiene cualquier reproducción activa (se apagan `ascPlaying`/`ascDescPlaying`/`piecePlaying`).
+- El `useEffect` de reproducción pasa `selectedProg` a `playScale`; el status text muestra "Reproduciendo I–V–vi–IV (…grados…) en bucle…".
+- El MIDI export (⬇ MIDI ASC/ASC+DESC) sigue siendo del patrón de escala simple (alcance actual).
+
+**Verificación**: simulación en Node de `getDegreeRoot` (I=0, IV=5, V=7) y de `getProgressionMidiSequence` (conteo de notas = grados×bars×tamaño de secuencia; contenido correcto por grado); build estático; revisión manual reproduciendo con distintas progresiones y raíces.
 
 #### Controles de voz tipo Fender Rhodes (knobs y sliders)
 

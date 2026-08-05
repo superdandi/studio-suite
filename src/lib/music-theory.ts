@@ -319,3 +319,38 @@ export function detectKey(pitchClasses: number[]): { key: string; confidence: nu
 
   return { key: bestKey, confidence: bestScore > 0 ? 1 : 0 };
 }
+
+// --- Progresiones armónicas ---
+
+export type ProgressionDegree = {
+  symbol: string;
+  semitones: number;
+  bars: number;
+};
+
+export type Progression = {
+  id: string;
+  name: string;
+  degrees: ProgressionDegree[];
+};
+
+export function getDegreeRoot(root: NoteName, degreeSemitones: number, octave = 4): number {
+  return noteToMidi(root, octave) + degreeSemitones;
+}
+
+export function getProgressionMidiSequence(
+  root: NoteName,
+  scaleType: ScaleType,
+  progression: Progression,
+  mode: "asc" | "ascdesc" = "asc",
+): number[] {
+  const sequence: number[] = [];
+  for (const degree of progression.degrees) {
+    const degreeRoot = getDegreeRoot(root, degree.semitones);
+    const degreeRootName = NOTE_NAMES[((degreeRoot % 12) + 12) % 12] as NoteName;
+    for (let bar = 0; bar < degree.bars; bar++) {
+      sequence.push(...getScaleMidiSequence(degreeRootName, scaleType, mode));
+    }
+  }
+  return sequence;
+}

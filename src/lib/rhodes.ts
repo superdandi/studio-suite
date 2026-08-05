@@ -83,6 +83,11 @@ export function brightnessCutoff(pos: number): number {
   return BRIGHTNESS_MIN * Math.pow(BRIGHTNESS_MAX / BRIGHTNESS_MIN, t);
 }
 
+export function brightnessInverse(hz: number): number {
+  const clamped = Math.min(BRIGHTNESS_MAX, Math.max(BRIGHTNESS_MIN, hz));
+  return Math.log(clamped / BRIGHTNESS_MIN) / Math.log(BRIGHTNESS_MAX / BRIGHTNESS_MIN);
+}
+
 function getClickBuffer(ctx: AudioContext): AudioBuffer {
   if (clickBuffer) return clickBuffer;
   const sr = ctx.sampleRate;

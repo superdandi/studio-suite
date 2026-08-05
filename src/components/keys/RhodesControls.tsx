@@ -20,6 +20,7 @@ import {
   setRhodesReverb,
   resetRhodes,
   brightnessCutoff,
+  brightnessInverse,
   type RhodesSettings,
 } from "@/lib/rhodes";
 
@@ -225,7 +226,7 @@ export default function RhodesControls() {
           />
           <Slider
             label="Brightness"
-            value={(settings.brightness - 500) / 19500}
+            value={brightnessInverse(settings.brightness)}
             min={0}
             max={1}
             step={0.01}

@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release + progresión armónica)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release + progresión armónica + reorganización del panel: faders verticales para VOZ y ENV)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -534,7 +534,7 @@ type Progression = { id: string; name: string; degrees: ProgressionDegree[] };
 
 **Verificación**: simulación en Node de `getDegreeRoot` (I=0, IV=5, V=7) y de `getProgressionMidiSequence` (conteo de notas = grados×bars×tamaño de secuencia; contenido correcto por grado); build estático; revisión manual reproduciendo con distintas progresiones y raíces.
 
-#### Controles de voz tipo Fender Rhodes (knobs y sliders)
+#### Controles de voz tipo Fender Rhodes (knobs, sliders y faders)
 
 **Objetivo**: agregar a la UI de Keys un panel de **controles de sonido inspirados en el Fender Rhodes** — el piano eléctrico de tine de los años 70 — para moldear la voz del instrumento. Hasta esta iteración, todas las notas sonaban como un oscilador sine plano conectado directo al destino; con el panel Rhodes se introduce una **cadena de procesamiento compartida** (bus de audio) por la que pasa **todo** el sonido de Keys: teclado físico, click del mouse, escalas y piezas de pianola.
 
@@ -567,23 +567,23 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 
 **Controles y rangos**:
 
-| Control | Tipo UI | Rango | Default | Nodo Web Audio |
-|---|---|---|---|---|
-| **Volume** | Knob | 0–1 | 0.30 | MasterGain |
-| **Tremolo Rate** | Knob | 0–10 Hz | 4 Hz | Oscillator LFO (sine) |
-| **Tremolo Depth** | Knob | 0–100% | 0 (off) | Gain del LFO |
-| **Bass** | Slider | −12…+12 dB | 0 dB | BiquadFilter lowshelf |
-| **Treble** | Slider | −12…+12 dB | 0 dB | BiquadFilter highshelf |
-| **Decay** | Slider | 0.01–2.0 s | 0.15 s | Tiempo de caída al nivel de sustain (ADSR) |
-| **Sustain** | Slider | 0–100% | 60% | Nivel sostenido tras el decay (ADSR) |
-| **Release** | Knob | 10–2000 ms | 200 ms | Caída exponencial al final de la nota (ADSR) |
-| **Drive** | Knob | 0–100% | 0 (bypass) | WaveShaperNode (curva tanh) |
-| **Brightness** | Slider | 500–20000 Hz (log) | 20000 (abierto) | BiquadFilter lowpass |
-| **Chorus Rate** | Knob | 0–5 Hz | 0.8 Hz | LFO sine → delay.delayTime |
-| **Chorus Depth** | Knob | 0–100% | 0 (off) | ganancia LFO + mezcla dry/wet |
-| **Key Click** | Knob | 0–100% | 0 | noise burst HPF ~3kHz al ataque |
-| **Attack** | Knob | 1–200 ms | 5 ms | ramp del envelope (g1/g2) |
-| **Reverb** | Knob | 0–100% | 0 (off) | ConvolverNode (IR procedural) |
+| Control | Sección | Tipo UI | Rango | Default | Nodo Web Audio |
+|---|---|---|---|---|---|
+| **Key Click** | Voz | Fader | 0–100% | 0 | noise burst HPF ~3kHz al ataque |
+| **Brightness** | Voz | Fader (log) | 500–20000 Hz | 20000 (abierto) | BiquadFilter lowpass |
+| **Attack** | Env | Fader | 1–200 ms | 5 ms | ramp del envelope (g1/g2) |
+| **Decay** | Env | Fader | 0.01–2.0 s | 0.15 s | Tiempo de caída al nivel de sustain (ADSR) |
+| **Sustain** | Env | Fader | 0–100% | 60% | Nivel sostenido tras el decay (ADSR) |
+| **Release** | Env | Fader | 10–2000 ms | 200 ms | Caída exponencial al final de la nota (ADSR) |
+| **Drive** | Amp | Knob | 0–100% | 0 (bypass) | WaveShaperNode (curva tanh) |
+| **Bass** | Amp | Slider | −12…+12 dB | 0 dB | BiquadFilter lowshelf |
+| **Treble** | Amp | Slider | −12…+12 dB | 0 dB | BiquadFilter highshelf |
+| **Volume** | Amp | Knob | 0–1 | 0.30 | MasterGain |
+| **Tremolo Rate** | FX | Knob | 0–10 Hz | 4 Hz | Oscillator LFO (sine) |
+| **Tremolo Depth** | FX | Knob | 0–100% | 0 (off) | Gain del LFO |
+| **Chorus Rate** | FX | Knob | 0–5 Hz | 0.8 Hz | LFO sine → delay.delayTime |
+| **Chorus Depth** | FX | Knob | 0–100% | 0 (off) | ganancia LFO + mezcla dry/wet |
+| **Reverb** | FX | Knob | 0–100% | 0 (off) | ConvolverNode (IR procedural) |
 
 **Espectro de parámetros de los efectos nuevos**:
 
@@ -607,9 +607,10 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 
 **UI** (`src/components/keys/RhodesControls.tsx`):
 - Panel en tarjeta `card-cyber` **debajo del piano**, encima de los botones de reproducción, con título tipo "RHODES · VOZ DEL INSTRUMENTO".
-- Organizado en **secciones sutiles**: **VOZ** (Attack, Key Click, Brightness, Decay, Sustain, Release) · **AMP** (Drive, Bass, Treble, Volume) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb).
-- **Knobs rotatorios** custom (drag vertical para ajustar, doble click para reset al default, `role="slider"` + atributos aria) para Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Drive, Key Click, Attack, Release y Reverb — con indicador de ángulo proporcional al valor.
-- **Sliders** (`<input type="range">` con `accent-color`, reutilizando el estilo del PulsePanel) para Bass, Treble, Decay, Sustain y Brightness.
+- Organizado en **secciones sutiles**: **VOZ** (Key Click, Brightness) · **ENV** (Attack, Decay, Sustain, Release) · **AMP** (Drive, Bass, Treble, Volume) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb). El envelope ADSR quedó agrupado en su propia sección **ENV**, con los cuatro controles del **mismo tipo** (antes Attack y Release eran knobs y Decay/Sustain sliders, lo que se veía inconsistente).
+- **Faders verticales** custom (`Fader`) para los controles de **VOZ y ENV** (Key Click, Brightness, Attack, Decay, Sustain, Release): pista de 96 px con **relleno desde la base** y un *cap* con glow del color del control. Interacción **absoluta** estilo consola — el cap salta al punto donde se toca y luego sigue al puntero (`t = (rect.bottom − clientY) / rect.height`), con *pointer capture* y limpieza en `pointercancel`/`lostpointercapture`. Teclado ↑/→ `+step` y ↓/← `−step`, **doble click → valor por defecto** (el default de Rhodes, no el mínimo), `role="slider"` + atributos aria. `Brightness` mantiene su **escala logarítmica** usando `brightnessInverse`/`brightnessCutoff` sobre una posición normalizada 0–1.
+- **Knobs rotatorios** custom (arrastre vertical relativo normalizado al rango, doble click → mínimo, `role="slider"` + atributos aria) para Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Drive y Reverb — con indicador de ángulo proporcional al valor.
+- **Sliders** horizontales (`<input type="range">` con `accent-color`, reutilizando el estilo del PulsePanel) para Bass y Treble (convención Rhodes: EQ en sliders).
 - Botón **RESET** que restaura todos los defaults (todo neutro).
 - Estado local (`useState`) + `useEffect` que aplica los setters del bus al montar y en cada cambio; al desmontar no se restaura nada (los controles persisten en el bus).
 
@@ -617,6 +618,29 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 - `playNoteFn` deja de conectar a `ctx.destination` y delega en `playRhodesNote` (que enruta al bus Rhodes). Como **todo** el audio de Keys pasa por `playNoteFn` (teclado físico vía `playNote`, escalas vía `playScale`, piezas vía `playPiece`), el panel Rhodes moldea **todas las vías** a la vez — una sola voz de instrumento coherente.
 
 **Verificación**: simulación Node del bus — valores de controls dentro de rango, matemática de tremolo (`1±depth`), decay (tiempo en segundos), curva de drive (identidad en 0, saturación creciente), cutoff logarítmico de brightness, IR de reverb con decaimiento exponencial, y que todos los setters existen; build estático; revisión manual girando knobs mientras se reproduce una escala y una pieza.
+
+#### Reorganización del panel de voz: faders verticales en VOZ y ENV
+
+**Motivación**: dentro de la sección **VOZ** los controles del envelope estaban partidos — **Attack** y **Release** eran **knobs** rotatorios mientras **Decay** y **Sustain** eran **sliders** horizontales —, sin un criterio visual único. Además, un envelope **ADSR** se lee mejor como cuatro controles idénticos y alineados.
+
+**Cambios**:
+- Nuevo componente **`Fader`** (vertical) en `RhodesControls.tsx`, junto a `Knob` y `Slider` (sin tocar `globals.css`).
+- **VOZ** pasa a tener **Key Click** y **Brightness**, ambos como **faders verticales**.
+- Nueva sección **ENV** con **Attack, Decay, Sustain y Release**, los cuatro como **faders verticales**.
+- **AMP** queda con **Drive** (knob), **Bass** y **Treble** (sliders horizontales, convención Rhodes de EQ) y **Volume** (knob), reordenados según la cadena de señal (Drive → Bass → Treble → Volume).
+- **FX** sin cambios (5 knobs).
+- **No se tocó `src/lib/rhodes.ts`**: rangos, setters y audio quedan idénticos; sólo cambia el control de UI.
+
+**Diseño del `Fader`**:
+- Pista vertical de **96 px** (`w-6`), relleno desde la base con el color del control al 35 % de opacidad, y un *cap* horizontal con borde + glow.
+- **Interacción absoluta** (a diferencia del `Knob`, que es relativo): `onPointerDown` calcula el valor desde la posición del puntero (`t = (rect.bottom − clientY) / rect.height`, 1 arriba / 0 abajo), hace `setPointerCapture` y sigue al puntero en `onPointerMove`. Es el comportamiento natural de un fader y no depende de la magnitud del rango.
+- **Robustez**: `onPointerCancel` y `onLostPointerCapture` liberan el estado de arrastre (el `Knob` no los tenía).
+- **Teclado**: ↑/→ `+step`, ↓/← `−step`.
+- **Doble click → `defaultValue`** (el valor por defecto de Rhodes del control), no el mínimo.
+- **Accesibilidad**: `role="slider"`, `aria-valuemin/max/now`, `aria-label`, `tabIndex` y anillo de foco.
+- **Escala logarítmica**: `Brightness` sigue trabajando sobre una posición normalizada 0–1 con `brightnessInverse` (posición ← Hz) y `brightnessCutoff` (Hz ← posición), así que el fader vertical conserva la curva logarítmica y el *round-trip* exacto.
+
+**Verificación**: `tsc --noEmit` limpio; `npm run build` OK (chunk `172` regenerado con hash nuevo); el bundle contiene el `Fader`. Revisión manual de los 6 faders (arrastre con mouse y touch, teclado, doble click) y de que Attack/Decay/Sustain/Release modifican el sonido.
 
 #### Mejoras futuras (ideas documentadas)
 
@@ -626,7 +650,7 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 
 - **[Arreglado] Slider de Brightness clavado en el extremo derecho (Keys)** — al soltar los efectos de la fase 2, la manecilla del slider de Brightness quedaba pegada al extremo derecho y no respondía al arrastre. **Causa**: en `RhodesControls.tsx` el `value` del slider se pasaba envuelto en `brightnessCutoff((brightness − 500)/19500)`. `brightnessCutoff(pos)` convierte una posición normalizada 0–1 en Hz (500→20000), así que con el default `brightness=20000` el `value` resultaba **20000 Hz** mientras el input tenía `min={0}` `max={1}`: el navegador recortaba el valor a 1 (extremo derecho) y, como cada arrastre recalcula un valor ≫ 1, React siempre lo re-recortaba a 1 → la manecilla nunca se movía. **Solución** (parche 1): pasar la posición normalizada directamente como `value={(brightness − 500)/19500}`. Aunque el thumb ya se movía, quedó otro defecto (ver abajo).
 - **[Arreglado] Manecilla de Brightness que no se queda donde se arrastra (Keys)** — tras el parche 1, el thumb se movía pero **se desviaba a la izquierda** de donde se dejaba (drift de hasta −36% del rango en el punto medio). **Causa**: el `value` del slider usaba la **inversa lineal** `(brightness − 500)/19500`, mientras que el `onChange` aplica la **conversión logarítmica** `brightnessCutoff(pos) = 500·40^t`. Como la escala es log, al arrastrar a posición `p` el brightness se guardaba como `500·40^p` y al recalcular la posición con la inversa lineal obtenía un valor mucho menor → el thumb saltaba de vuelta; en cada arrastre se repetía el salto. **Solución**: añadir en `rhodes.ts` la **inversa logarítmica exacta** `brightnessInverse(hz) = log40(hz/500)` (emparejada con `brightnessCutoff`, clamp [500, 20000]) y usarla como `value` del slider. Round-trip perfecto (drift ~1e-16, sin salto), conservando la escala logarítmica en la UI. El `onChange` y el `format` se mantienen.
-- **[Arreglado] Knob de Attack salta de 0 a 200 ms en un solo paso (Keys)** — el knob de **Attack** de la sección VOZ subía de ~1 ms a **200 ms** (el máximo) al primer movimiento del arrastre, sin recorrido intermedio. **Causa**: en el componente `Knob` de `RhodesControls.tsx` la sensibilidad del arrastre estaba **hardcodeada** como `delta = (startY − clientY) × 0.5`, un factor pensado para rangos del orden 0–100. Con el rango de Attack (`min=0.001`, `max=0.2`, o sea 1–200 ms) **un solo píxel** de arrastre produce `delta = 0.5`, que es **2,5 veces el rango completo** → el valor se recortaba a `max` (200 ms) de inmediato. Los demás knobs compartían el mismo factor y resultaban igualmente hipersensibles (p. ej. Volume 0–1 se recorría en 2 px), aunque el de Attack era el más evidente. **Solución**: normalizar la sensibilidad al **rango** del propio knob — `delta = (startY − clientY) × (max − min) / 150` — de modo que ~150 px de arrastre vertical recorren todo el rango, **independientemente de su magnitud**. Todos los knobs (Attack, Key Click, Release, Drive, Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Reverb) quedan con la misma sensación de control, y el snapping al `step` sigue funcionando.
+- **[Arreglado] Knob de Attack salta de 0 a 200 ms en un solo paso (Keys)** — el knob de **Attack** de la sección VOZ subía de ~1 ms a **200 ms** (el máximo) al primer movimiento del arrastre, sin recorrido intermedio. **Causa**: en el componente `Knob` de `RhodesControls.tsx` la sensibilidad del arrastre estaba **hardcodeada** como `delta = (startY − clientY) × 0.5`, un factor pensado para rangos del orden 0–100. Con el rango de Attack (`min=0.001`, `max=0.2`, o sea 1–200 ms) **un solo píxel** de arrastre produce `delta = 0.5`, que es **2,5 veces el rango completo** → el valor se recortaba a `max` (200 ms) de inmediato. Los demás knobs compartían el mismo factor y resultaban igualmente hipersensibles (p. ej. Volume 0–1 se recorría en 2 px), aunque el de Attack era el más evidente. **Solución**: normalizar la sensibilidad al **rango** del propio knob — `delta = (startY − clientY) × (max − min) / 150` — de modo que ~150 px de arrastre vertical recorren todo el rango, **independientemente de su magnitud**. Todos los knobs (Attack, Key Click, Release, Drive, Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Reverb) quedan con la misma sensación de control, y el snapping al `step` sigue funcionando. **Confirmación**: verificado en el sitio en vivo (el chunk de GitHub Pages ya contenía el fix, byte-idéntico al build local); la persistencia del síntoma que reportó el usuario era **caché del navegador** y se resolvió con un *hard refresh*. Tras el refresh, todos los faders/knobs mejoraron su sensación de control según lo esperado.
 
 ## Build
 

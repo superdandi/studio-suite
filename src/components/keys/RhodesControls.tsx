@@ -52,7 +52,13 @@ function Knob({ label, value, min, max, step = 1, format, accent = "#ff00ff", on
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (!dragRef.current) return;
-      const delta = (dragRef.current.startY - e.clientY) * 0.5;
+      // Sensibilidad normalizada al rango: ~150 px de arrastre vertical
+      // recorren todo el rango (min→max), independientemente de su magnitud.
+      // Antes se usaba un factor fijo (×0.5) pensado para rangos 0–100, lo que
+      // hacía que knobs de rango pequeño (p. ej. Attack 0.001–0.2) saltaran al
+      // máximo con un solo píxel.
+      const range = max - min;
+      const delta = (dragRef.current.startY - e.clientY) * (range / 150);
       const raw = dragRef.current.startValue + delta;
       const snapped = Math.round(raw / step) * step;
       onChange(Math.min(max, Math.max(min, snapped)));

@@ -337,17 +337,6 @@ export default function RhodesControls() {
       <div className="flex flex-wrap gap-x-8 gap-y-5">
         <Section title="Voz" accent="#ffdd44">
           <Fader
-            label="Key Click"
-            value={settings.keyClick}
-            min={0}
-            max={1}
-            step={0.01}
-            format={(v) => `${Math.round(v * 100)}%`}
-            accent="#ffaa00"
-            defaultValue={RHODES_DEFAULTS.keyClick}
-            onChange={(v) => patch({ keyClick: v })}
-          />
-          <Fader
             label="Brightness"
             value={brightnessInverse(settings.brightness)}
             min={0}
@@ -360,6 +349,17 @@ export default function RhodesControls() {
             accent="#00dd88"
             defaultValue={brightnessInverse(RHODES_DEFAULTS.brightness)}
             onChange={(v) => patch({ brightness: brightnessCutoff(v) })}
+          />
+          <Fader
+            label="Key Click"
+            value={settings.keyClick}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
+            accent="#ffaa00"
+            defaultValue={RHODES_DEFAULTS.keyClick}
+            onChange={(v) => patch({ keyClick: v })}
           />
         </Section>
 
@@ -412,6 +412,16 @@ export default function RhodesControls() {
 
         <Section title="Amp" accent="#ff00ff">
           <Knob
+            label="Volume"
+            value={settings.volume}
+            min={0}
+            max={1}
+            step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
+            accent="#ff00ff"
+            onChange={(v) => patch({ volume: v })}
+          />
+          <Knob
             label="Drive"
             value={settings.drive}
             min={0}
@@ -440,16 +450,6 @@ export default function RhodesControls() {
             format={(v) => `${v > 0 ? "+" : ""}${v} dB`}
             accent="#00dd88"
             onChange={(v) => patch({ treble: v })}
-          />
-          <Knob
-            label="Volume"
-            value={settings.volume}
-            min={0}
-            max={1}
-            step={0.01}
-            format={(v) => `${Math.round(v * 100)}%`}
-            accent="#ff00ff"
-            onChange={(v) => patch({ volume: v })}
           />
         </Section>
 

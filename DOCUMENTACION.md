@@ -569,16 +569,16 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 
 | Control | Sección | Tipo UI | Rango | Default | Nodo Web Audio |
 |---|---|---|---|---|---|
-| **Key Click** | Voz | Fader | 0–100% | 0 | noise burst HPF ~3kHz al ataque |
 | **Brightness** | Voz | Fader (log) | 500–20000 Hz | 20000 (abierto) | BiquadFilter lowpass |
+| **Key Click** | Voz | Fader | 0–100% | 0 | noise burst HPF ~3kHz al ataque |
 | **Attack** | Env | Fader | 1–200 ms | 5 ms | ramp del envelope (g1/g2) |
 | **Decay** | Env | Fader | 0.01–2.0 s | 0.15 s | Tiempo de caída al nivel de sustain (ADSR) |
 | **Sustain** | Env | Fader | 0–100% | 60% | Nivel sostenido tras el decay (ADSR) |
 | **Release** | Env | Fader | 10–2000 ms | 200 ms | Caída exponencial al final de la nota (ADSR) |
+| **Volume** | Amp | Knob | 0–1 | 0.30 | MasterGain |
 | **Drive** | Amp | Knob | 0–100% | 0 (bypass) | WaveShaperNode (curva tanh) |
 | **Bass** | Amp | Slider | −12…+12 dB | 0 dB | BiquadFilter lowshelf |
 | **Treble** | Amp | Slider | −12…+12 dB | 0 dB | BiquadFilter highshelf |
-| **Volume** | Amp | Knob | 0–1 | 0.30 | MasterGain |
 | **Tremolo Rate** | FX | Knob | 0–10 Hz | 4 Hz | Oscillator LFO (sine) |
 | **Tremolo Depth** | FX | Knob | 0–100% | 0 (off) | Gain del LFO |
 | **Chorus Rate** | FX | Knob | 0–5 Hz | 0.8 Hz | LFO sine → delay.delayTime |
@@ -607,7 +607,7 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 
 **UI** (`src/components/keys/RhodesControls.tsx`):
 - Panel en tarjeta `card-cyber` **debajo del piano**, encima de los botones de reproducción, con título tipo "RHODES · VOZ DEL INSTRUMENTO".
-- Organizado en **secciones sutiles**: **VOZ** (Key Click, Brightness) · **ENV** (Attack, Decay, Sustain, Release) · **AMP** (Drive, Bass, Treble, Volume) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb). El envelope ADSR quedó agrupado en su propia sección **ENV**, con los cuatro controles del **mismo tipo** (antes Attack y Release eran knobs y Decay/Sustain sliders, lo que se veía inconsistente).
+- Organizado en **secciones sutiles**: **VOZ** (Brightness, Key Click) · **ENV** (Attack, Decay, Sustain, Release) · **AMP** (Volume, Drive, Bass, Treble) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb). El envelope ADSR quedó agrupado en su propia sección **ENV**, con los cuatro controles del **mismo tipo** (antes Attack y Release eran knobs y Decay/Sustain sliders, lo que se veía inconsistente).
 - **Faders verticales** custom (`Fader`) para los controles de **VOZ y ENV** (Key Click, Brightness, Attack, Decay, Sustain, Release): pista de 96 px con **relleno desde la base** y un *cap* con glow del color del control. Interacción **absoluta** estilo consola — el cap salta al punto donde se toca y luego sigue al puntero (`t = (rect.bottom − clientY) / rect.height`), con *pointer capture* y limpieza en `pointercancel`/`lostpointercapture`. Teclado ↑/→ `+step` y ↓/← `−step`, **doble click → valor por defecto** (el default de Rhodes, no el mínimo), `role="slider"` + atributos aria. `Brightness` mantiene su **escala logarítmica** usando `brightnessInverse`/`brightnessCutoff` sobre una posición normalizada 0–1.
 - **Knobs rotatorios** custom (arrastre vertical relativo normalizado al rango, doble click → mínimo, `role="slider"` + atributos aria) para Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Drive y Reverb — con indicador de ángulo proporcional al valor.
 - **Sliders** horizontales (`<input type="range">` con `accent-color`, reutilizando el estilo del PulsePanel) para Bass y Treble (convención Rhodes: EQ en sliders).
@@ -625,9 +625,9 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 
 **Cambios**:
 - Nuevo componente **`Fader`** (vertical) en `RhodesControls.tsx`, junto a `Knob` y `Slider` (sin tocar `globals.css`).
-- **VOZ** pasa a tener **Key Click** y **Brightness**, ambos como **faders verticales**.
+- **VOZ** pasa a tener **Brightness** y **Key Click**, ambos como **faders verticales**.
 - Nueva sección **ENV** con **Attack, Decay, Sustain y Release**, los cuatro como **faders verticales**.
-- **AMP** queda con **Drive** (knob), **Bass** y **Treble** (sliders horizontales, convención Rhodes de EQ) y **Volume** (knob), reordenados según la cadena de señal (Drive → Bass → Treble → Volume).
+- **AMP** queda con **Volume** y **Drive** (knobs) seguidos de **Bass** y **Treble** (sliders horizontales, convención Rhodes de EQ), de modo que los dos knobs quedan juntos y los dos sliders juntos.
 - **FX** sin cambios (5 knobs).
 - **No se tocó `src/lib/rhodes.ts`**: rangos, setters y audio quedan idénticos; sólo cambia el control de UI.
 

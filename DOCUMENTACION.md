@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release + progresión armónica + reorganización del panel: faders verticales para VOZ y ENV)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release + progresión armónica + reorganización del panel: faders verticales para VOZ y ENV + rediseño visual HUD cyberpunk del panel de controles)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -606,11 +606,12 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 - `playRhodesNote(freq, duration, volume)` sintetiza el **tine** con envelope **ADSR**: el ataque (Attack) sube a `volume`, el decay (Decay, tiempo en segundos) cae exponencialmente al **nivel de sustain** (Sustain), la nota se **mantiene** a ese nivel durante su `duration` (el tiempo que dura la nota en teclado/escala/pieza) y al terminar hace el **release** (Release) exponencial a 0. El segundo oscilador a ×2 frecuencia (la "campana" metálica) conserva su carácter: ataca a `volume×0.35`, decae a 0 en `decay×0.6` y **no** tiene fase sustain — el metal se apaga naturalmente. Si Key Click > 0, se dispara además un burst de noise HPF al ataque.
 
 **UI** (`src/components/keys/RhodesControls.tsx`):
-- Panel en tarjeta `card-cyber` **debajo del piano**, encima de los botones de reproducción, con título tipo "RHODES · VOZ DEL INSTRUMENTO".
-- Organizado en **secciones sutiles**: **VOZ** (Brightness, Key Click) · **ENV** (Attack, Decay, Sustain, Release) · **AMP** (Volume, Drive, Bass, Treble) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb). El envelope ADSR quedó agrupado en su propia sección **ENV**, con los cuatro controles del **mismo tipo** (antes Attack y Release eran knobs y Decay/Sustain sliders, lo que se veía inconsistente).
-- **Faders verticales** custom (`Fader`) para los controles de **VOZ y ENV** (Key Click, Brightness, Attack, Decay, Sustain, Release): pista de 96 px con **relleno desde la base** y un *cap* con glow del color del control. Interacción **absoluta** estilo consola — el cap salta al punto donde se toca y luego sigue al puntero (`t = (rect.bottom − clientY) / rect.height`), con *pointer capture* y limpieza en `pointercancel`/`lostpointercapture`. Teclado ↑/→ `+step` y ↓/← `−step`, **doble click → valor por defecto** (el default de Rhodes, no el mínimo), `role="slider"` + atributos aria. `Brightness` mantiene su **escala logarítmica** usando `brightnessInverse`/`brightnessCutoff` sobre una posición normalizada 0–1.
-- **Knobs rotatorios** custom (arrastre vertical relativo normalizado al rango, doble click → mínimo, `role="slider"` + atributos aria) para Volume, Tremolo Rate/Depth, Chorus Rate/Depth, Drive y Reverb — con indicador de ángulo proporcional al valor.
-- **Sliders** horizontales (`<input type="range">` con `accent-color`, reutilizando el estilo del PulsePanel) para Bass y Treble (convención Rhodes: EQ en sliders).
+- Panel `rhodes-panel` **debajo del piano**, encima de los botones de reproducción, con estética **HUD cyberpunk**: grid/scanline de fondo, **esquinas** tipo corchete (magenta arriba, cyan abajo) y barra de título con **LED** + botón `RESET` reestilizado.
+- Organizado en **secciones** VOZ · ENV · AMP · FX, cada una con un **header HUD** (LED + línea degradada) y **un color por sección**: VOZ ámbar `#ffdd44`, ENV verde `#00dd88`, AMP magenta `#ff00ff`, FX cyan `#00ffff`. Orden: **VOZ** (Brightness, Key Click) · **ENV** (Attack, Decay, Sustain, Release) · **AMP** (Volume, Drive, Bass, Treble) · **FX** (Tremolo Rate/Depth, Chorus Rate/Depth, Reverb).
+- **Knobs SVG** (Volume, Drive, FX): cuerpo con **gradiente radial**, **marcas de escala** alrededor, **arco de valor** que se dibuja del mínimo al actual con glow, aguja + punto central. Arrastre vertical relativo normalizado al rango, doble click → mínimo, `role="slider"` + aria.
+- **Faders verticales** (`Fader`, VOZ + ENV): pista de 96 px con **marcas de escala**, **relleno en gradiente** hacia el acento y **cap tipo LED** que se intensifica al arrastrar. Interacción **absoluta** (`t = (rect.bottom − clientY) / rect.height`), *pointer capture* y limpieza en `pointercancel`/`lostpointercapture`. Teclado ↑/→ `+step` y ↓/← `−step`, doble click → default de Rhodes, `role="slider"` + aria. `Brightness` conserva la escala log con `brightnessInverse`/`brightnessCutoff`.
+- **Sliders horizontales** (`rhodes-slider`, Bass/Treble): `<input type="range">` **reestilizado con CSS custom** (`::-webkit-slider-*` / `::-moz-range-*`): pista oscura con borde y thumb circular con glow del acento. Ya no se ven nativos.
+- **Readouts LCD** (`rhodes-readout`): todos los valores en un chip oscuro con fuente `font-mono` (VT323), color del acento y glow; el chip se ilumina al hacer hover sobre el control.
 - Botón **RESET** que restaura todos los defaults (todo neutro).
 - Estado local (`useState`) + `useEffect` que aplica los setters del bus al montar y en cada cambio; al desmontar no se restaura nada (los controles persisten en el bus).
 
@@ -624,7 +625,7 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 **Motivación**: dentro de la sección **VOZ** los controles del envelope estaban partidos — **Attack** y **Release** eran **knobs** rotatorios mientras **Decay** y **Sustain** eran **sliders** horizontales —, sin un criterio visual único. Además, un envelope **ADSR** se lee mejor como cuatro controles idénticos y alineados.
 
 **Cambios**:
-- Nuevo componente **`Fader`** (vertical) en `RhodesControls.tsx`, junto a `Knob` y `Slider` (sin tocar `globals.css`).
+- Nuevo componente **`Fader`** (vertical) en `RhodesControls.tsx`, junto a `Knob` y `Slider`.
 - **VOZ** pasa a tener **Brightness** y **Key Click**, ambos como **faders verticales**.
 - Nueva sección **ENV** con **Attack, Decay, Sustain y Release**, los cuatro como **faders verticales**.
 - **AMP** queda con **Volume** y **Drive** (knobs) seguidos de **Bass** y **Treble** (sliders horizontales, convención Rhodes de EQ), de modo que los dos knobs quedan juntos y los dos sliders juntos.
@@ -632,7 +633,7 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 - **No se tocó `src/lib/rhodes.ts`**: rangos, setters y audio quedan idénticos; sólo cambia el control de UI.
 
 **Diseño del `Fader`**:
-- Pista vertical de **96 px** (`w-6`), relleno desde la base con el color del control al 35 % de opacidad, y un *cap* horizontal con borde + glow.
+- Pista vertical de **96 px** (`w-6`), **relleno en gradiente** desde la base (transparente → acento) y un *cap* horizontal tipo **LED** con borde + glow, que se intensifica mientras se arrastra. Marcas de escala superpuestas a la pista.
 - **Interacción absoluta** (a diferencia del `Knob`, que es relativo): `onPointerDown` calcula el valor desde la posición del puntero (`t = (rect.bottom − clientY) / rect.height`, 1 arriba / 0 abajo), hace `setPointerCapture` y sigue al puntero en `onPointerMove`. Es el comportamiento natural de un fader y no depende de la magnitud del rango.
 - **Robustez**: `onPointerCancel` y `onLostPointerCapture` liberan el estado de arrastre (el `Knob` no los tenía).
 - **Teclado**: ↑/→ `+step`, ↓/← `−step`.
@@ -641,6 +642,46 @@ El key click (burst de noise HPF) se mezcla en paralelo al ataque de cada nota, 
 - **Escala logarítmica**: `Brightness` sigue trabajando sobre una posición normalizada 0–1 con `brightnessInverse` (posición ← Hz) y `brightnessCutoff` (Hz ← posición), así que el fader vertical conserva la curva logarítmica y el *round-trip* exacto.
 
 **Verificación**: `tsc --noEmit` limpio; `npm run build` OK (chunk `172` regenerado con hash nuevo); el bundle contiene el `Fader`. Revisión manual de los 6 faders (arrastre con mouse y touch, teclado, doble click) y de que Attack/Decay/Sustain/Release modifican el sonido.
+
+#### Rediseño visual del panel (HUD cyberpunk)
+
+**Motivación**: el panel funcionaba bien pero se veía plano — knobs de círculo liso sin escala, faders de pista limpia, sliders nativos del navegador y valores en texto suelto. Se buscó una estética **HUD cyberpunk neón** coherente con el resto de Studio Suite, **sin tocar la lógica ni el audio**.
+
+**Paleta — un color por sección** (antes era uno por control):
+
+| Sección | Acento | Controles |
+|---|---|---|
+| **VOZ** | ámbar `#ffdd44` | Brightness, Key Click |
+| **ENV** | verde `#00dd88` | Attack, Decay, Sustain, Release |
+| **AMP** | magenta `#ff00ff` | Volume, Drive, Bass, Treble |
+| **FX** | cyan `#00ffff` | Tremolo Rate/Depth, Chorus Rate/Depth, Reverb |
+
+El acento se pasa a cada control y se reexporta como variable CSS local `--rhodes-accent` para que gradientes, cap del fader y pseudo-elementos del slider lo reutilicen.
+
+**Panel y secciones**:
+- `.rhodes-panel`: grid/scanline de fondo muy sutil (`repeating-linear-gradient` en X e Y), viñeta superior, esquinas tipo **corchete HUD** (`.rhodes-corner`: magenta arriba, cyan abajo).
+- Barra de título con **LED** (`.rhodes-led`), texto `RHODES · VOZ DEL INSTRUMENTO` y botón **RESET** reestilizado (`.rhodes-reset`, rojo hardware con glow).
+- Cada sección tiene **header HUD**: LED en el acento + título mono con `tracking` amplio + línea degradada que se desvanece.
+
+**Knobs (SVG)**:
+- Cuerpo con **gradiente radial** y sombras internas para dar profundidad.
+- **Ticks de escala** (12 intervalos de −135° a +135°) dibujados en SVG.
+- **Arco de valor**: pista completa en gris + arco del mínimo al valor actual en el acento con `drop-shadow`.
+- **Aguja** desde el centro al borde + punto central; el glow del conjunto se intensifica al arrastrar.
+
+**Faders (VOZ + ENV)**:
+- Ticks de escala sobre la pista, relleno en **gradiente** hacia el acento y **cap tipo LED** que se enciende al arrastrar.
+- Interacción y accesibilidad sin cambios (absoluta, pointer capture, teclado, doble click, aria).
+
+**Sliders horizontales (Bass/Treble)**:
+- Clase `.rhodes-slider` con restyle custom en `globals.css`: `::-webkit-slider-runnable-track` / `::-webkit-slider-thumb` y `::-moz-range-track` / `::-moz-range-thumb`. Pista oscura con borde y sombra interna; thumb circular con borde del acento, gradiente radial y glow. Hover intensifica el glow y `focus-visible` agrega anillo. Dejan de verse nativos.
+
+**Readouts LCD**:
+- Todos los valores usan `.rhodes-readout`: chip oscuro con borde sutil, `font-mono` (VT323), color del acento, `text-shadow` y sombra interna; al hacer hover sobre el control el chip se ilumina.
+
+**Alcance**: sólo `RhodesControls.tsx` (reescritura de `Knob`/`Fader`/`Slider`/`Section`/panel) y el bloque `.rhodes-*` nuevo en `src/app/globals.css`. **No se modificó `src/lib/rhodes.ts`** ni los rangos, setters, steps o `onChange`.
+
+**Verificación**: `tsc --noEmit` limpio; `eslint` sin errores (2 warnings preexistentes en `IntervalCircle.tsx` y `TunePanel.tsx`); `npm run build` OK; el CSS compilado contiene todas las clases `.rhodes-*` y las reglas del slider; revisión visual de las cuatro secciones, hover, arrastre, teclado, doble click y responsive.
 
 #### Mejoras futuras (ideas documentadas)
 

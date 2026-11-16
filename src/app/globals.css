@@ -335,3 +335,152 @@
   z-index: -2;
   animation: glitch-2 2s infinite linear alternate-reverse;
 }
+
+/* ============================================================
+   Keys · panel Rhodes (HUD cyberpunk)
+   ============================================================ */
+
+.rhodes-panel {
+  background-color: rgba(6, 6, 14, 0.62);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.18)),
+    repeating-linear-gradient(0deg, rgba(255, 0, 255, 0.035) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(0, 255, 255, 0.03) 0 1px, transparent 1px 26px);
+}
+
+.rhodes-corner {
+  position: absolute;
+  z-index: 5;
+  width: 14px;
+  height: 14px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.rhodes-led {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+}
+
+.rhodes-reset {
+  padding: 2px 9px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 68, 85, 0.5);
+  background: rgba(255, 68, 85, 0.06);
+  color: #ff4455;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-shadow: 0 0 6px rgba(255, 68, 85, 0.6);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.rhodes-reset:hover {
+  background: rgba(255, 68, 85, 0.18);
+  box-shadow: 0 0 12px rgba(255, 68, 85, 0.5);
+}
+
+.rhodes-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8888aa;
+}
+
+.rhodes-readout {
+  display: inline-block;
+  min-width: 3.4rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.25));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: center;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 6px currentColor;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.rhodes-ctrl:hover .rhodes-readout {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 10px -1px currentColor;
+}
+
+/* --- Fader vertical --- */
+.rhodes-fader-track {
+  touch-action: none;
+}
+.rhodes-fader-fill {
+  background: linear-gradient(to top, rgba(255, 255, 255, 0), var(--rhodes-accent, #ff00ff));
+  opacity: 0.55;
+}
+.rhodes-fader-ticks {
+  background-image: repeating-linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.1) 0 1px,
+    transparent 1px 11px
+  );
+}
+
+/* --- Slider horizontal custom --- */
+.rhodes-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  --rhodes-accent: #ff00ff;
+}
+.rhodes-slider:focus {
+  outline: none;
+}
+.rhodes-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  border: 1px solid #2a2a4a;
+  background: linear-gradient(180deg, #0d0d1a, #1a1a2e);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+.rhodes-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  border: 1px solid #2a2a4a;
+  background: linear-gradient(180deg, #0d0d1a, #1a1a2e);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+.rhodes-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border-radius: 9999px;
+  border: 2px solid var(--rhodes-accent);
+  background: radial-gradient(circle at 35% 30%, #2a2a45, #0b0b16);
+  box-shadow: 0 0 8px var(--rhodes-accent), inset 0 0 4px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.15s ease;
+}
+.rhodes-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: 2px solid var(--rhodes-accent);
+  background: radial-gradient(circle at 35% 30%, #2a2a45, #0b0b16);
+  box-shadow: 0 0 8px var(--rhodes-accent), inset 0 0 4px rgba(0, 0, 0, 0.6);
+}
+.rhodes-slider:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 14px var(--rhodes-accent), inset 0 0 4px rgba(0, 0, 0, 0.6);
+}
+.rhodes-slider:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #00ffff;
+  outline-offset: 2px;
+}

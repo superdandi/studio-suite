@@ -24,6 +24,42 @@ import {
   type RhodesSettings,
 } from "@/lib/rhodes";
 
+// --- Paleta HUD: un color por sección ---
+const SECTION_ACCENTS = {
+  voz: "#ffdd44",
+  env: "#00dd88",
+  amp: "#ff00ff",
+  fx: "#00ffff",
+} as const;
+
+// Variables CSS locales para reutilizar el acento en gradientes/pseudo-elementos.
+const accentVars = (accent: string) =>
+  ({ "--rhodes-accent": accent }) as unknown as React.CSSProperties;
+
+// --- Geometría de los arcos/ticks del knob (viewBox 0 0 100 100) ---
+const KNOB_TICKS = 12;
+
+function polar(angleDeg: number, r: number) {
+  const a = (angleDeg * Math.PI) / 180;
+  return { x: 50 + r * Math.sin(a), y: 50 - r * Math.cos(a) };
+}
+
+function arcPath(startDeg: number, endDeg: number, r: number) {
+  const s = polar(startDeg, r);
+  const e = polar(endDeg, r);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+}
+
+// Display tipo LCD para todos los valores.
+function Readout({ children, accent }: { children: React.ReactNode; accent: string }) {
+  return (
+    <span className="rhodes-readout" style={{ color: accent, borderColor: `${accent}55` }}>
+      {children}
+    </span>
+  );
+}
+
 interface KnobProps {
   label: string;
   value: number;
@@ -36,15 +72,17 @@ interface KnobProps {
 }
 
 function Knob({ label, value, min, max, step = 1, format, accent = "#ff00ff", onChange }: KnobProps) {
-  const pct = (value - min) / (max - min);
+  const pct = Math.min(1, Math.max(0, (value - min) / (max - min)));
   const angle = -135 + pct * 270;
   const dragRef = useRef<{ startY: number; startValue: number } | null>(null);
+  const [active, setActive] = useState(false);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       e.preventDefault();
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      e.currentTarget.setPointerCapture(e.pointerId);
       dragRef.current = { startY: e.clientY, startValue: value };
+      setActive(true);
     },
     [value],
   );
@@ -54,9 +92,6 @@ function Knob({ label, value, min, max, step = 1, format, accent = "#ff00ff", on
       if (!dragRef.current) return;
       // Sensibilidad normalizada al rango: ~150 px de arrastre vertical
       // recorren todo el rango (min→max), independientemente de su magnitud.
-      // Antes se usaba un factor fijo (×0.5) pensado para rangos 0–100, lo que
-      // hacía que knobs de rango pequeño (p. ej. Attack 0.001–0.2) saltaran al
-      // máximo con un solo píxel.
       const range = max - min;
       const delta = (dragRef.current.startY - e.clientY) * (range / 150);
       const raw = dragRef.current.startValue + delta;
@@ -68,6 +103,7 @@ function Knob({ label, value, min, max, step = 1, format, accent = "#ff00ff", on
 
   const handlePointerUp = useCallback(() => {
     dragRef.current = null;
+    setActive(false);
   }, []);
 
   const handleDoubleClick = useCallback(() => {
@@ -75,9 +111,11 @@ function Knob({ label, value, min, max, step = 1, format, accent = "#ff00ff", on
   }, [min, onChange]);
 
   const display = format ? format(value) : Math.round(value);
+  const needleStart = polar(angle, 9);
+  const needleEnd = polar(angle, 33);
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="rhodes-ctrl flex w-[74px] flex-col items-center gap-1.5">
       <div
         role="slider"
         aria-label={label}
@@ -90,66 +128,70 @@ function Knob({ label, value, min, max, step = 1, format, accent = "#ff00ff", on
           if (e.key === "ArrowUp" || e.key === "ArrowRight") onChange(Math.min(max, value + stepKey));
           if (e.key === "ArrowDown" || e.key === "ArrowLeft") onChange(Math.max(min, value - stepKey));
         }}
-        className="relative w-14 h-14 rounded-full border-2 cursor-ns-resize select-none touch-none outline-none focus:border-[#00ffff] focus:ring-1 focus:ring-[#00ffff]/40"
-        style={{ borderColor: accent }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onLostPointerCapture={handlePointerUp}
         onDoubleClick={handleDoubleClick}
+        className="relative h-16 w-16 cursor-ns-resize select-none touch-none rounded-full outline-none"
+        style={active ? { filter: `drop-shadow(0 0 6px ${accent})` } : undefined}
       >
-        <div className="absolute inset-0 rounded-full bg-[#1a1a2e] shadow-inner" />
+        {/* cuerpo con profundidad radial */}
         <div
-          className="absolute left-1/2 top-1/2 w-0.5 h-[38%] origin-bottom"
+          className="absolute inset-[16%] rounded-full border"
           style={{
-            backgroundColor: accent,
-            transform: `translateX(-50%) translateY(-100%) rotate(${angle}deg)`,
-            transformOrigin: "50% 100%",
+            borderColor: "#2a2a4a",
+            background: "radial-gradient(circle at 35% 28%, #2a2a45 0%, #16162a 52%, #0b0b16 100%)",
+            boxShadow: "inset 0 2px 6px rgba(0,0,0,0.85), inset 0 -2px 5px rgba(255,255,255,0.04)",
           }}
         />
+        {/* ticks + arco de valor + aguja */}
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden="true">
+          {Array.from({ length: KNOB_TICKS + 1 }, (_, i) => {
+            const a = -135 + (i / KNOB_TICKS) * 270;
+            const p1 = polar(a, 45);
+            const p2 = polar(a, 49);
+            return (
+              <line
+                key={i}
+                x1={p1.x}
+                y1={p1.y}
+                x2={p2.x}
+                y2={p2.y}
+                stroke={accent}
+                strokeWidth={1.4}
+                strokeLinecap="round"
+                opacity={0.3}
+              />
+            );
+          })}
+          <path d={arcPath(-135, 135, 40)} fill="none" stroke="#2a2a4a" strokeWidth={4} strokeLinecap="round" />
+          {pct > 0.002 && (
+            <path
+              d={arcPath(-135, angle, 40)}
+              fill="none"
+              stroke={accent}
+              strokeWidth={4}
+              strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 3px ${accent})` }}
+            />
+          )}
+          <line
+            x1={needleStart.x}
+            y1={needleStart.y}
+            x2={needleEnd.x}
+            y2={needleEnd.y}
+            stroke={accent}
+            strokeWidth={3.2}
+            strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 3px ${accent})` }}
+          />
+          <circle cx={50} cy={50} r={2.6} fill={accent} opacity={0.9} />
+        </svg>
       </div>
-      <span className="text-[10px] text-[#8888aa] font-mono uppercase tracking-wider">{label}</span>
-      <span className="text-[11px] font-mono" style={{ color: accent }}>
-        {display}
-      </span>
-    </div>
-  );
-}
-
-function Slider({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  format,
-  accent,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  format?: (v: number) => string;
-  accent: string;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1 min-w-[72px]">
-      <span className="text-[10px] text-[#8888aa] font-mono uppercase tracking-wider">{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full"
-        style={{ accentColor: accent }}
-      />
-      <span className="text-[11px] font-mono" style={{ color: accent }}>
-        {format ? format(value) : Math.round(value)}
-      </span>
+      <span className="rhodes-label">{label}</span>
+      <Readout accent={accent}>{display}</Readout>
     </div>
   );
 }
@@ -180,6 +222,7 @@ function Fader({
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const [active, setActive] = useState(false);
   const pct = Math.min(1, Math.max(0, (value - min) / (max - min)));
 
   // Interacción ABSOLUTA estilo consola: el thumb salta al punto donde se toca
@@ -205,6 +248,7 @@ function Fader({
       e.preventDefault();
       e.currentTarget.setPointerCapture(e.pointerId);
       draggingRef.current = true;
+      setActive(true);
       setFromClientY(e.clientY);
     },
     [setFromClientY],
@@ -220,6 +264,7 @@ function Fader({
 
   const handlePointerUp = useCallback(() => {
     draggingRef.current = false;
+    setActive(false);
   }, []);
 
   const handleDoubleClick = useCallback(() => {
@@ -230,7 +275,7 @@ function Fader({
   const resetLabel = defaultValue !== undefined ? "default" : "mínimo";
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="rhodes-ctrl flex w-[74px] flex-col items-center gap-1.5">
       <div
         ref={trackRef}
         role="slider"
@@ -245,8 +290,8 @@ function Fader({
           if (e.key === "ArrowUp" || e.key === "ArrowRight") onChange(Math.min(max, value + stepKey));
           if (e.key === "ArrowDown" || e.key === "ArrowLeft") onChange(Math.max(min, value - stepKey));
         }}
-        className="relative w-6 rounded-full border cursor-ns-resize select-none touch-none outline-none focus:border-[#00ffff] focus:ring-1 focus:ring-[#00ffff]/40"
-        style={{ height: FADER_TRACK_H, borderColor: "#2a2a4a", background: "#1a1a2e" }}
+        className="rhodes-fader-track relative w-6 cursor-ns-resize select-none touch-none rounded-full border outline-none"
+        style={{ ...accentVars(accent), height: FADER_TRACK_H, borderColor: "#2a2a4a", background: "#12121f" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -254,39 +299,81 @@ function Fader({
         onLostPointerCapture={handlePointerUp}
         onDoubleClick={handleDoubleClick}
       >
-        {/* Relleno desde la base hasta el valor */}
+        {/* relleno en gradiente desde la base */}
         <div
-          className="absolute inset-x-0 bottom-0 rounded-full"
-          style={{ height: `${pct * 100}%`, background: accent, opacity: 0.35 }}
+          className="rhodes-fader-fill absolute inset-x-0 bottom-0 rounded-full"
+          style={{ height: `${pct * 100}%` }}
         />
-        {/* Thumb / cap */}
+        {/* marcas de escala */}
+        <div className="rhodes-fader-ticks pointer-events-none absolute inset-0 rounded-full" />
+        {/* cap tipo LED */}
         <div
-          className="absolute h-1.5 w-7 rounded-full border"
+          className="absolute h-1.5 w-8 rounded-full border"
           style={{
             bottom: `${pct * 100}%`,
             left: "50%",
             transform: "translate(-50%, 50%)",
             borderColor: accent,
             background: "#0a0a0f",
-            boxShadow: `0 0 6px ${accent}`,
+            boxShadow: active ? `0 0 13px ${accent}, 0 0 4px ${accent}` : `0 0 6px ${accent}`,
           }}
         />
       </div>
-      <span className="text-[10px] text-[#8888aa] font-mono uppercase tracking-wider">{label}</span>
-      <span className="text-[11px] font-mono" style={{ color: accent }}>
-        {display}
-      </span>
+      <span className="rhodes-label">{label}</span>
+      <Readout accent={accent}>{display}</Readout>
+    </div>
+  );
+}
+
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  format,
+  accent,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  format?: (v: number) => string;
+  accent: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="rhodes-ctrl flex w-[116px] flex-col items-center gap-1.5">
+      <input
+        type="range"
+        aria-label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="rhodes-slider"
+        style={accentVars(accent)}
+      />
+      <span className="rhodes-label">{label}</span>
+      <Readout accent={accent}>{format ? format(value) : Math.round(value)}</Readout>
     </div>
   );
 }
 
 function Section({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: accent }}>
-        {title}
-      </p>
-      <div className="flex flex-wrap items-start gap-4">{children}</div>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <span className="rhodes-led" style={{ background: accent, boxShadow: `0 0 8px ${accent}` }} />
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: accent }}>
+          {title}
+        </span>
+        <span className="h-px w-16 sm:w-24" style={{ background: `linear-gradient(90deg, ${accent}aa, transparent)` }} />
+      </div>
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-4">{children}</div>
     </div>
   );
 }
@@ -322,20 +409,31 @@ export default function RhodesControls() {
   }, []);
 
   return (
-    <div className="card-cyber rounded p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-[#8888aa] font-mono uppercase tracking-wider">Rhodes · Voz del instrumento</p>
+    <div className="rhodes-panel card-cyber relative overflow-hidden rounded p-4">
+      {/* esquinas HUD */}
+      <span className="rhodes-corner" style={{ top: 0, left: 0, borderTopColor: "#ff00ff", borderLeftColor: "#ff00ff" }} />
+      <span className="rhodes-corner" style={{ top: 0, right: 0, borderTopColor: "#ff00ff", borderRightColor: "#ff00ff" }} />
+      <span className="rhodes-corner" style={{ bottom: 0, left: 0, borderBottomColor: "#00ffff", borderLeftColor: "#00ffff" }} />
+      <span className="rhodes-corner" style={{ bottom: 0, right: 0, borderBottomColor: "#00ffff", borderRightColor: "#00ffff" }} />
+
+      <div className="relative z-10 mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="rhodes-led" style={{ background: "#ff00ff", boxShadow: "0 0 8px #ff00ff" }} />
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-[#c8c8e0]">
+            Rhodes · Voz del instrumento
+          </p>
+        </div>
         <button
           onClick={handleReset}
-          className="px-2 py-0.5 rounded border border-[#ff4455]/50 text-[#ff4455] text-[10px] font-mono tracking-wider hover:bg-[#ff4455]/10 transition-all"
+          className="rhodes-reset"
           title="Restaurar todos los controles a sus valores por defecto"
         >
           RESET
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-x-8 gap-y-5">
-        <Section title="Voz" accent="#ffdd44">
+      <div className="relative z-10 flex flex-wrap gap-x-10 gap-y-7">
+        <Section title="Voz" accent={SECTION_ACCENTS.voz}>
           <Fader
             label="Brightness"
             value={brightnessInverse(settings.brightness)}
@@ -346,7 +444,7 @@ export default function RhodesControls() {
               const hz = brightnessCutoff(v);
               return hz >= 1000 ? `${Math.round(hz / 1000)}k Hz` : `${Math.round(hz)} Hz`;
             }}
-            accent="#00dd88"
+            accent={SECTION_ACCENTS.voz}
             defaultValue={brightnessInverse(RHODES_DEFAULTS.brightness)}
             onChange={(v) => patch({ brightness: brightnessCutoff(v) })}
           />
@@ -357,13 +455,13 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#ffaa00"
+            accent={SECTION_ACCENTS.voz}
             defaultValue={RHODES_DEFAULTS.keyClick}
             onChange={(v) => patch({ keyClick: v })}
           />
         </Section>
 
-        <Section title="Env" accent="#ffdd44">
+        <Section title="Env" accent={SECTION_ACCENTS.env}>
           <Fader
             label="Attack"
             value={settings.attack}
@@ -371,7 +469,7 @@ export default function RhodesControls() {
             max={0.2}
             step={0.001}
             format={(v) => `${Math.round(v * 1000)} ms`}
-            accent="#ffdd44"
+            accent={SECTION_ACCENTS.env}
             defaultValue={RHODES_DEFAULTS.attack}
             onChange={(v) => patch({ attack: v })}
           />
@@ -382,7 +480,7 @@ export default function RhodesControls() {
             max={2}
             step={0.01}
             format={(v) => `${v.toFixed(2)} s`}
-            accent="#ffaa00"
+            accent={SECTION_ACCENTS.env}
             defaultValue={RHODES_DEFAULTS.decay}
             onChange={(v) => patch({ decay: v })}
           />
@@ -393,7 +491,7 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#00dd88"
+            accent={SECTION_ACCENTS.env}
             defaultValue={RHODES_DEFAULTS.sustain}
             onChange={(v) => patch({ sustain: v })}
           />
@@ -404,13 +502,13 @@ export default function RhodesControls() {
             max={2}
             step={0.01}
             format={(v) => `${Math.round(v * 1000)} ms`}
-            accent="#ffaa00"
+            accent={SECTION_ACCENTS.env}
             defaultValue={RHODES_DEFAULTS.release}
             onChange={(v) => patch({ release: v })}
           />
         </Section>
 
-        <Section title="Amp" accent="#ff00ff">
+        <Section title="Amp" accent={SECTION_ACCENTS.amp}>
           <Knob
             label="Volume"
             value={settings.volume}
@@ -418,7 +516,7 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#ff00ff"
+            accent={SECTION_ACCENTS.amp}
             onChange={(v) => patch({ volume: v })}
           />
           <Knob
@@ -428,7 +526,7 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#ff00ff"
+            accent={SECTION_ACCENTS.amp}
             onChange={(v) => patch({ drive: v })}
           />
           <Slider
@@ -438,7 +536,7 @@ export default function RhodesControls() {
             max={12}
             step={1}
             format={(v) => `${v > 0 ? "+" : ""}${v} dB`}
-            accent="#ff00ff"
+            accent={SECTION_ACCENTS.amp}
             onChange={(v) => patch({ bass: v })}
           />
           <Slider
@@ -448,12 +546,12 @@ export default function RhodesControls() {
             max={12}
             step={1}
             format={(v) => `${v > 0 ? "+" : ""}${v} dB`}
-            accent="#00dd88"
+            accent={SECTION_ACCENTS.amp}
             onChange={(v) => patch({ treble: v })}
           />
         </Section>
 
-        <Section title="FX" accent="#00ffff">
+        <Section title="FX" accent={SECTION_ACCENTS.fx}>
           <Knob
             label="Trem. Rate"
             value={settings.tremoloRate}
@@ -461,7 +559,7 @@ export default function RhodesControls() {
             max={10}
             step={0.1}
             format={(v) => `${v.toFixed(1)} Hz`}
-            accent="#00ffff"
+            accent={SECTION_ACCENTS.fx}
             onChange={(v) => patch({ tremoloRate: v })}
           />
           <Knob
@@ -471,7 +569,7 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#00ffff"
+            accent={SECTION_ACCENTS.fx}
             onChange={(v) => patch({ tremoloDepth: v })}
           />
           <Knob
@@ -481,7 +579,7 @@ export default function RhodesControls() {
             max={5}
             step={0.1}
             format={(v) => `${v.toFixed(1)} Hz`}
-            accent="#00dd88"
+            accent={SECTION_ACCENTS.fx}
             onChange={(v) => patch({ chorusRate: v })}
           />
           <Knob
@@ -491,7 +589,7 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#00dd88"
+            accent={SECTION_ACCENTS.fx}
             onChange={(v) => patch({ chorusDepth: v })}
           />
           <Knob
@@ -501,7 +599,7 @@ export default function RhodesControls() {
             max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            accent="#00dd88"
+            accent={SECTION_ACCENTS.fx}
             onChange={(v) => patch({ reverb: v })}
           />
         </Section>

@@ -263,6 +263,13 @@ export default function KeysPanel() {
               La escala recorrerá en bucle: {selectedProg.degrees.map((d) => d.symbol).join(" → ")}
             </p>
           )}
+          {selectedProg?.suggestedScale && (
+            <p className="text-xs text-[#8888aa] mt-1">
+              Sugerida:{" "}
+              <span className="text-[#00ffff]">{SCALE_TYPES[selectedProg.suggestedScale].name}</span>{" "}
+              · tocá la raíz como tónica
+            </p>
+          )}
         </div>
 
         <div className="card-cyber rounded p-4 overflow-x-auto">

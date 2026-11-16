@@ -7,7 +7,7 @@ Lista checable de secciones revisadas y aprobadas, actualizada en cada iteració
 - [x] **Metrónomo (Pulse)** — figuras, compases, acentos, percusión, volumen, TAP
 - [ ] **Afinador (Tune)**
 - [ ] **Analizador (Scan)**
-- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release + progresión armónica + reorganización del panel: faders verticales para VOZ y ENV + rediseño visual HUD cyberpunk del panel de controles)
+- [ ] **Escalas (Keys)** — en progreso (escalas étnicas + loop + export MIDI + mapeo de teclado físico + switch TECLADO/PIANOLA + piezas de pianola + controles Rhodes + efectos Drive/Chorus/Reverb/KeyClick/Attack/Brightness + envelope ADSR Sustain/Release + progresión armónica + reorganización del panel: faders verticales para VOZ y ENV + rediseño visual HUD cyberpunk del panel de controles + 12 progresiones armónicas nuevas: city pop, cueca chilena, reggaetón, neo soul, Royal Road y Soy pan soy paz)
 - [ ] **Entrenamiento auditivo (Ear)**
 - [ ] **Teoría (Theory)**
 - [ ] **Tema/UI global**
@@ -498,10 +498,15 @@ type Piece = { id: string; name: string; genre: string; tempo: number; notes: Pi
 
 ```ts
 type ProgressionDegree = { symbol: string; semitones: number; bars: number };
-// semitones: offset desde la tónica en la escala mayor (I=0, ii=2, IV=5, V=7, vi=9, bVII=10…)
+// semitones: offset desde la raíz (0 = raíz) en cualquier modo (I=0, ii=2, IV=5, V=7, vi=9, bVII=10…)
 // bars: compases que suena este grado (el patrón de escala se repite bars veces)
 
-type Progression = { id: string; name: string; degrees: ProgressionDegree[] };
+type Progression = {
+  id: string;
+  name: string;
+  degrees: ProgressionDegree[];
+  suggestedScale?: ScaleType; // sólo informativo: escala con la que suena mejor
+};
 ```
 
 **Funciones nuevas**:
@@ -520,6 +525,22 @@ type Progression = { id: string; name: string; degrees: ProgressionDegree[] };
 | `i-iv-v-v` | I–IV–V–V | I(1) IV(1) V(2) | Blues básico |
 | `blues-12` | Blues 12 compases | I(4) IV(2) I(2) V(1) IV(1) I(1) V(1) | Forma de blues de 12 compases |
 | `i-bvii-iv-i` | I–bVII–IV–I (Rock) | I(1) bVII(1) IV(1) I(1) | Rock / mixolidio |
+| `city-pop-marusa` | City Pop (丸サ進行) | IVmaj7(1) III7(1) vi7(1) v7(1) I7(1) | City pop / J-pop: descenso cromático IV→III7 ("Just the Two of Us") |
+| `city-pop-ii-v-i` | City Pop (ii–V–I) | ii7(1) V7(1) Imaj7(1) vi7(1) | Turnaround jazzero del city pop |
+| `city-pop-plastic-love` | City Pop (Plastic Love) | i(1) IV(1) ii(1) v(1) | City pop menor (Mariya Takeuchi) |
+| `cueca-chilena` | Cueca chilena | I(1) IV(1) V7(1) I(1) | Folclor chileno: tónica–subdominante–dominante en modo mayor |
+| `cueca-cadencia` | Cueca (cadencia bVI–V7–I) | bVI(1) V7(1) I(1) | Cadencia "cuequera" |
+| `reggaeton` | Reggaetón | i(1) VI(1) III(1) VII(1) | Loop menor universal del dembow (Despacito, Ginza) |
+| `reggaeton-gasolina` | Reggaetón (Gasolina) | i(1) bVII(1) bVI(1) bVII(1) | Variante más oscura (Daddy Yankee) |
+| `neo-soul` | Neo Soul | ii7(1) V7(1) Imaj7(1) VI7(1) | ii–V–I con VI7 que reabre el ciclo |
+| `neo-soul-backdoor` | Neo Soul (backdoor) | iv7(1) bVII7(1) Imaj7(1) | Cadencia backdoor |
+| `royal-road` | Royal Road (王道進行) | IVmaj7(1) V7(1) iii7(1) vi7(1) | Progresión "4536" del J-pop |
+| `royal-road-resolved` | Royal Road (resuelto) | IVmaj7(1) V7(1) iii7(1) vi7(1) ii7(1) V7(1) I(1) | Royal Road + cadencia ii–V–I final |
+| `soy-pan-soy-paz` | Soy pan, soy paz, soy más | Imaj7(1) IVmaj7(1) ii7(1) V7(1) Imaj7(1) | Motor armónico de la canción de Piero / Mercedes Sosa |
+
+**Escala sugerida**: las progresiones menores (`city-pop-plastic-love`, `reggaeton`, `reggaeton-gasolina`) declaran `suggestedScale: "natural-minor"`. El selector muestra debajo la pista "Sugerida: Menor Natural · tocá la raíz como tónica". Es **sólo informativo**: no cambia la escala ni la reproducción.
+
+**Nota sobre la calidad de acorde**: el motor sólo usa la **raíz** de cada grado y reproduce sobre ella la escala elegida. Por eso los sufijos (`maj7`, `7`, `iii`, `bVI`…) documentan la armonía de referencia pero **no cambian el sonido**: `Fmaj7` y `Fm` suenan igual (misma raíz); el color lo aporta la escala seleccionada. Lo que define cada progresión es la **secuencia de raíces**.
 
 **Player** (`src/hooks/useScalePlayer.ts`): `playScale` acepta un parámetro opcional `progression: Progression | null` (default `null`). Si hay progresión, la secuencia de frecuencias se genera con `getProgressionMidiSequence`; si es `null`, comportamiento actual (`getScaleMidiSequence`). El bucle de notas (300 ms) recorre la secuencia completa y al final vuelve al inicio — así, cada ciclo repite la progresión.
 
@@ -528,6 +549,7 @@ type Progression = { id: string; name: string; degrees: ProgressionDegree[] };
 **UI** (`src/components/keys/KeysPanel.tsx`):
 - Nuevo estado `selectedProgId` (default `"none"`) y derivado `selectedProg` (`null` si `none`).
 - `<select>` estilizado debajo de las categorías de escala: opción "Sin progresión" + una por progresión, con etiqueta que muestra los grados (ej. "I–V–vi–IV · I → V → vi → IV").
+- Si la progresión declara `suggestedScale`, debajo del texto de grados aparece la pista "Sugerida: Menor Natural · tocá la raíz como tónica" (sólo informativa).
 - Al elegir una progresión se detiene cualquier reproducción activa (se apagan `ascPlaying`/`ascDescPlaying`/`piecePlaying`).
 - El `useEffect` de reproducción pasa `selectedProg` a `playScale`; el status text muestra "Reproduciendo I–V–vi–IV (…grados…) en bucle…".
 - El MIDI export (⬇ MIDI ASC/ASC+DESC) sigue siendo del patrón de escala simple (alcance actual).

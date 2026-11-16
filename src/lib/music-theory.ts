@@ -324,6 +324,8 @@ export function detectKey(pitchClasses: number[]): { key: string; confidence: nu
 
 export type ProgressionDegree = {
   symbol: string;
+  /** Offset desde la raíz en semitonos (0 = raíz). Vale para cualquier modo:
+   *  el motor reproduce la escala elegida sobre esta raíz, sin calidad de acorde. */
   semitones: number;
   bars: number;
 };
@@ -332,6 +334,8 @@ export type Progression = {
   id: string;
   name: string;
   degrees: ProgressionDegree[];
+  /** Escala con la que la progresión suena mejor (sólo informativo, no cambia nada). */
+  suggestedScale?: ScaleType;
 };
 
 export function getDegreeRoot(root: NoteName, degreeSemitones: number, octave = 4): number {
